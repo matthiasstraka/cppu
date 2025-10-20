@@ -1,0 +1,28 @@
+name: linux
+
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libboost-test-dev
+          version: 1.0
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build
+        run:  cmake --build ${{github.workspace}}/build --target all --parallel
+
+      - name: Unit Tests
+        working-directory: ${{github.workspace}}/build
+        run: ctest
+
