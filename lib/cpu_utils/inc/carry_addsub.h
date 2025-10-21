@@ -28,10 +28,9 @@ namespace cpu_utils
 #ifdef _MSC_VER
         return _addcarry_u8(carry, target, value, &target);
 #else
-        uint8_t sum = target + value + static_cast<std::uint8_t>(carry);
-        uint8_t c = static_cast<std::uint8_t>((target & value) ^ ((target ^ value) & ~sum));
-        target = sum;
-        return (c & 0x80) == 0x80;
+        uint16_t sum = target + value + static_cast<std::uint8_t>(carry);
+        target = static_cast<uint8_t>(sum);
+        return (sum & ~0xFF) != 0;
 #endif
     }
 
@@ -40,10 +39,9 @@ namespace cpu_utils
 #ifdef _MSC_VER
         return _addcarry_u16(carry, target, value, &target);
 #else
-        uint16_t sum = target + value + static_cast<std::uint16_t>(carry);
-        uint16_t c = static_cast<std::uint16_t>((target & value) ^ ((target ^ value) & ~sum));
-        target = sum;
-        return (c & 0x8000) == 0x8000;
+        uint32_t sum = target + value + static_cast<std::uint8_t>(carry);
+        target = static_cast<uint16_t>(sum);
+        return (sum & ~0xFFFF) != 0;
 #endif
     }
 

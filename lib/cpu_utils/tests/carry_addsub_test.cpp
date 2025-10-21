@@ -17,6 +17,15 @@ BOOST_AUTO_TEST_CASE(adc_u8_test)
     BOOST_CHECK_EQUAL(accu, 1);
 }
 
+BOOST_AUTO_TEST_CASE(adc_u16_test)
+{
+    std::uint16_t accu = 0x0FFF;
+    BOOST_CHECK_EQUAL(false, add_with_carry(false, accu, 0xF000));
+    BOOST_CHECK_EQUAL(accu, 0xFFFF);
+    BOOST_CHECK_EQUAL(true, add_with_carry(true, accu, 0));
+    BOOST_CHECK_EQUAL(accu, 0);
+}
+
 BOOST_AUTO_TEST_CASE(adc_u32_test)
 {
     std::uint32_t accu = 0;
