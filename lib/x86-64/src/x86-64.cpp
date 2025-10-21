@@ -41,7 +41,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     &CPU::op_al_imm8<OpAdd>,
-    &CPU::op_reg_imm32<OpAdd>,
+    &CPU::op_eax_imm32<OpAdd>,
     0,
     0,
     0,
@@ -49,7 +49,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     &CPU::op_al_imm8<OpOr>,
-    &CPU::op_reg_imm32<OpOr>,
+    &CPU::op_eax_imm32<OpOr>,
     0,
     &CPU::execute_0F,
 // 10-1F
@@ -57,16 +57,16 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::op_al_imm8<OpAdc>,
-    &CPU::op_reg_imm32<OpAdc>,
+    &CPU::op_al_imm8<OpAdc>,   // 0x14 ADC AL, imm8
+    &CPU::op_eax_imm32<OpAdc>, // 0x15 ADC EAX, imm32
     0,
     0,
     0,
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::op_al_imm8<OpSbb>,   // 0x1C SBB AL, imm8
+    &CPU::op_eax_imm32<OpSbb>, // 0x1D SBB EAX, imm32
     0,
     0,
 // 20-2F
@@ -75,15 +75,15 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     &CPU::op_al_imm8<OpAnd>,
-    &CPU::op_reg_imm32<OpAnd>,
+    &CPU::op_eax_imm32<OpAnd>,
     0,
     0,
     0,
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::op_al_imm8<OpSub>,   // 0x2C SUB AL, imm8
+    &CPU::op_eax_imm32<OpSub>, // 0x1D SUB EAX, imm32
     0,
     0,
 // 30-3F
@@ -92,7 +92,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     &CPU::op_al_imm8<OpXor>,
-    &CPU::op_reg_imm32<OpXor>,
+    &CPU::op_eax_imm32<OpXor>,
     0,
     0,
     0,
@@ -486,7 +486,7 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
 }
 
 template<typename Op>
-ptr_t CPU::op_reg_imm32(Instruction& inst, ptr_t ip)
+ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
 {
     flag_t flags = m_flags;
     if (inst.operand_size_override)

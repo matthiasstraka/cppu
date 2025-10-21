@@ -31,4 +31,24 @@ BOOST_AUTO_TEST_CASE(adc_u32_test)
     BOOST_CHECK_EQUAL(accu, 0);
 }
 
+BOOST_AUTO_TEST_CASE(sbb_u8_test)
+{
+    std::uint8_t accu = 10;
+    BOOST_CHECK_EQUAL(false, sub_with_borrow(false, accu, 5));
+    BOOST_CHECK_EQUAL(accu, 5);
+    BOOST_CHECK_EQUAL(false, sub_with_borrow(true, accu, 1));
+    BOOST_CHECK_EQUAL(accu, 3);
+    BOOST_CHECK_EQUAL(true, sub_with_borrow(false, accu, 4));
+    BOOST_CHECK_EQUAL(accu, static_cast<uint8_t>(-1));
+}
+
+BOOST_AUTO_TEST_CASE(sbb_u32_test)
+{
+    std::uint32_t accu = 0;
+    BOOST_CHECK_EQUAL(true, sub_with_borrow(false, accu, static_cast<uint32_t>(-1)));
+    BOOST_CHECK_EQUAL(accu, 1);
+    BOOST_CHECK_EQUAL(true, sub_with_borrow(true, accu, 2));
+    BOOST_CHECK_EQUAL(accu, static_cast<uint32_t>(-2));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

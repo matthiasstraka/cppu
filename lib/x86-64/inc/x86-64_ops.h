@@ -62,6 +62,28 @@ namespace cpu::X86_64
         }
     };
 
+    struct OpSub
+    {
+        template<typename T>
+        static inline T call(T dst, T imm, flag_t& flags)
+        {
+            bool cf = utils::sub_with_borrow(false, dst, imm);
+            update_flags(flags, dst, cf);
+            return dst;
+        }
+    };
+
+    struct OpSbb
+    {
+        template<typename T>
+        static inline T call(T dst, T imm, flag_t& flags)
+        {
+            bool cf = utils::sub_with_borrow((flags & FLAG_CF) == FLAG_CF, dst, imm);
+            update_flags(flags, dst, cf);
+            return dst;
+        }
+    };
+
     struct OpXor
     {
         template<typename T>

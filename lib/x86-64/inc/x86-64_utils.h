@@ -70,4 +70,52 @@ namespace cpu::utils
         return (c & 0x8000000000000000ull) == 0x8000000000000000ull;
 #endif
     }
+
+    inline bool sub_with_borrow(bool carry, std::uint8_t& target, std::uint8_t value)
+    {
+#ifdef _MSC_VER
+        return _subborrow_u8(carry, target, value, &target);
+#else
+        std::uint8_t diff = target - value - static_cast<std::uint8_t>(carry);
+        std::uint8_t c = (unsigned char)((diff & value) ^ ((diff ^ value) & ~target));
+        target = diff;
+        return (c & 0x80) == 0x80;
+#endif
+    }
+
+    inline bool sub_with_borrow(bool carry, std::uint16_t& target, std::uint16_t value)
+    {
+#ifdef _MSC_VER
+        return _subborrow_u16(carry, target, value, &target);
+#else
+        std::uint16_t diff = target - value - static_cast<std::uint8_t>(carry);
+        std::uint16_t c = (unsigned char)((diff & value) ^ ((diff ^ value) & ~target));
+        target = diff;
+        return (c & 0x8000) == 0x8000;
+#endif
+    }
+
+    inline bool sub_with_borrow(bool carry, std::uint32_t& target, std::uint32_t value)
+    {
+#ifdef HAS_INTRIN_ADC
+        return _subborrow_u32(carry, target, value, &target);
+#else
+        std::uint32_t diff = target - value - static_cast<std::uint8_t>(carry);
+        std::uint32_t c = (unsigned char)((diff & value) ^ ((diff ^ value) & ~target));
+        target = diff;
+        return (c & 0x80000000) == 0x80000000;
+#endif
+    }
+
+    inline bool sub_with_borrow(bool carry, std::uint64_t& target, std::uint64_t value)
+    {
+#ifdef HAS_INTRIN_ADC
+        return _subborrow_u64(carry, target, value, reinterpret_cast<unsigned long long*>(&target));
+#else
+        std::uint64_t diff = target - value - static_cast<std::uint8_t>(carry);
+        std::uint64_t c = (unsigned char)((diff & value) ^ ((diff ^ value) & ~target));
+        target = diff;
+        return (c & 0x8000000000000000ull) == 0x8000000000000000ull;
+#endif
+    }
 }

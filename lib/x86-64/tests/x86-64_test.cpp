@@ -281,13 +281,14 @@ BOOST_AUTO_TEST_CASE(jmp_rel8_test)
     BOOST_REQUIRE_EQUAL(cpu.execute_one(2), 0);
 }
 
-BOOST_AUTO_TEST_CASE(add_al_imm_test)
+BOOST_AUTO_TEST_CASE(add_sub_al_imm_test)
 {
     const std::uint8_t inst[] = {
         0x04, 0x01, // add al, 1
         0x04, 0x07, // add al, 7
         0x04, static_cast<std::uint8_t>(-8), // add al, -8
         0x04, static_cast<std::uint8_t>(-8), // add al, -8
+        0x2c, static_cast<std::uint8_t>(-8), // sub al, -8
     };
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
@@ -310,10 +311,15 @@ BOOST_AUTO_TEST_CASE(add_al_imm_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
 
-    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add al, -8
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xf8);
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, FLAG_SF);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // sub al, -8
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x00);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
 }
 
 BOOST_AUTO_TEST_CASE(adc_al_imm_test)
