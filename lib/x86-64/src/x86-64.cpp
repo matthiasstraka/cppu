@@ -175,7 +175,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
+    &CPU::op_rm8_r8<OpTest>, // 0x84 TEST r/m8, r8
     0,
     0,
     0,
@@ -213,8 +213,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::op_al_imm8<OpTest>, // 0xA8 TEST AL, imm8
+    &CPU::op_eax_imm32<OpTest>, // 0xA9 TEST EAX, imm32
     0,
     0,
     0,
@@ -483,7 +483,11 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
         flags = m_flags;
     }
     auto& dst = reg8(REG_RAX, false, false);
-    dst = Op::call(dst, fetch_imm<uint8_t>(ip + 1), flags);
+    auto result = Op::call(dst, fetch_imm<uint8_t>(ip + 1), flags);
+    if constexpr (Op::STORE_RESULT)
+    {
+        dst = result;
+    }
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
@@ -502,19 +506,31 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     if (inst.operand_size_override)
     {
         auto& dst = reg16(REG_RAX);
-        dst = Op::call(dst, fetch_imm<uint16_t>(ip + 1), flags);
+        auto result = Op::call(dst, fetch_imm<uint16_t>(ip + 1), flags);
+        if constexpr (Op::STORE_RESULT)
+        {
+            dst = result;
+        }
         ip += 3;
     }
     else if (inst.rex_w)
     {
         auto& dst = reg64(REG_RAX, inst.rex_b);
-        dst = Op::call(dst, fetch_imm<uint64_t>(ip + 1), flags);
+        auto result = Op::call(dst, fetch_imm<uint64_t>(ip + 1), flags);
+        if constexpr (Op::STORE_RESULT)
+        {
+            dst = result;
+        }
         ip += 9;
     }
     else
     {
         auto& dst = reg32(REG_RAX);
-        dst = Op::call(dst, fetch_imm<uint32_t>(ip + 1), flags);
+        auto result = Op::call(dst, fetch_imm<uint32_t>(ip + 1), flags);
+        if constexpr (Op::STORE_RESULT)
+        {
+            dst = result;
+        }
         ip += 5;
     }
     if constexpr (Op::AFFECTED_FLAGS)
@@ -606,7 +622,11 @@ template<typename Op> ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         auto& dst = reg8(modrm.rm, inst.rex_present, inst.rex_b);
-        dst = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
+        auto result = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
+        if constexpr (Op::STORE_RESULT)
+        {
+            dst = result;
+        }
         ip += 2;
     }
     else
@@ -614,7 +634,10 @@ template<typename Op> ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
         auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
         uint8_t dst = load<uint8_t>(dst_address.first);
         dst = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
-        store(dst_address.first, dst);
+        if constexpr (Op::STORE_RESULT)
+        {
+            store(dst_address.first, dst);
+        }
         ip += 2 + dst_address.second;
     }
     if constexpr (Op::AFFECTED_FLAGS)

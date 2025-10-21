@@ -21,6 +21,7 @@ namespace cpu::X86_64
     struct OpAdd
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -33,6 +34,7 @@ namespace cpu::X86_64
     struct OpAdc
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -45,6 +47,7 @@ namespace cpu::X86_64
     struct OpAnd
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -57,6 +60,7 @@ namespace cpu::X86_64
     struct OpMov
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -67,6 +71,7 @@ namespace cpu::X86_64
     struct OpOr
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -79,6 +84,7 @@ namespace cpu::X86_64
     struct OpSub
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -91,6 +97,7 @@ namespace cpu::X86_64
     struct OpSbb
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -100,9 +107,22 @@ namespace cpu::X86_64
         }
     };
 
+    struct OpTest
+    {
+        static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = false;
+        template<typename T>
+        static inline T call(T dst, T imm, flag_t& flags)
+        {
+            update_flags(flags, dst & imm);
+            return dst;
+        }
+    };
+
     struct OpXor
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {

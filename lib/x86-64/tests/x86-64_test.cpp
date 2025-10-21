@@ -451,6 +451,30 @@ BOOST_AUTO_TEST_CASE(logical_al_imm8_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, FLAG_SF);
 }
 
+BOOST_AUTO_TEST_CASE(test_test)
+{
+    const std::uint8_t inst[] = {
+        0xa8, 0x00, // test al, 0
+        0xa8, 0x0F, // test al, 0x0f
+        0xa8, 0x80, // test al, 0x80
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RAX, 0xF0);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // test al, 0
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xF0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // test al, 0x0f
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xF0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // test al, 0x80
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xF0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
+}
+
 BOOST_AUTO_TEST_CASE(xor_eax_imm32_test)
 {
     const std::uint8_t inst[] = {
