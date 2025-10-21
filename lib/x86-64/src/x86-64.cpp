@@ -179,8 +179,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::op_rm8_r8<OpMov>, // 0x88 MOV r/m8, r8
-    &CPU::execute_MOV_89,
+    &CPU::op_rm8_r8<OpMov>,   // 0x88 MOV r/m8, r8
+    &CPU::op_rm32_r32<OpMov>, // 0x89 MOV r/m32, r32
     &CPU::execute_MOV_8A,
     &CPU::execute_MOV_8B,
     0,
@@ -358,9 +358,31 @@ void CPU::store(ptr_t address, T value)
 }
 
 template<typename T>
-T CPU::load(ptr_t address)
+T CPU::load(ptr_t address) const
 {
     return *reinterpret_cast<const T*>(static_cast<const kernel::IfKernel64*>(m_kernel)->translate_address(address));
+}
+
+
+template<typename Op, typename T>
+void CPU::op_r_r(T& first, T second, cpu::X86_64::flag_t& flags)
+{
+    auto result = Op::call(first, second, flags);
+    if constexpr (Op::STORE_RESULT)
+    {
+        first = result;
+    }
+}
+
+template<typename Op, typename T>
+void CPU::op_m_r(ptr_t first_addr, T second, cpu::X86_64::flag_t& flags)
+{
+    T first = load<T>(first_addr);
+    first = Op::call(first, second, flags);
+    if constexpr (Op::STORE_RESULT)
+    {
+        store(first_addr, first);
+    }
 }
 
 template<uint8_t code>
@@ -482,12 +504,7 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
     {
         flags = m_flags;
     }
-    auto& dst = reg8(REG_RAX, false, false);
-    auto result = Op::call(dst, fetch_imm<uint8_t>(ip + 1), flags);
-    if constexpr (Op::STORE_RESULT)
-    {
-        dst = result;
-    }
+    op_r_r<Op>(reg8(REG_RAX, false, false), fetch_imm<uint8_t>(ip + 1), flags);
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
@@ -505,32 +522,17 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     }
     if (inst.operand_size_override)
     {
-        auto& dst = reg16(REG_RAX);
-        auto result = Op::call(dst, fetch_imm<uint16_t>(ip + 1), flags);
-        if constexpr (Op::STORE_RESULT)
-        {
-            dst = result;
-        }
+        op_r_r<Op>(reg16(REG_RAX), fetch_imm<uint16_t>(ip + 1), flags);
         ip += 3;
     }
     else if (inst.rex_w)
     {
-        auto& dst = reg64(REG_RAX, inst.rex_b);
-        auto result = Op::call(dst, fetch_imm<uint64_t>(ip + 1), flags);
-        if constexpr (Op::STORE_RESULT)
-        {
-            dst = result;
-        }
+        op_r_r<Op>(reg64(REG_RAX, inst.rex_b), fetch_imm<uint64_t>(ip + 1), flags);
         ip += 9;
     }
     else
     {
-        auto& dst = reg32(REG_RAX);
-        auto result = Op::call(dst, fetch_imm<uint32_t>(ip + 1), flags);
-        if constexpr (Op::STORE_RESULT)
-        {
-            dst = result;
-        }
+        op_r_r<Op>(reg32(REG_RAX), fetch_imm<uint32_t>(ip + 1), flags);
         ip += 5;
     }
     if constexpr (Op::AFFECTED_FLAGS)
@@ -610,7 +612,37 @@ ptr_t CPU::execute_Jcc_7x(Instruction& instruction, ptr_t ip)
     return next;
 }
 
-template<typename Op> ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
+template<typename Op>
+ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
+    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    const uint8_t reg = reg8(modrm.reg, inst.rex_present, inst.rex_r);
+    if (modrm.mod == MOD_DIRECT_REGISTER)
+    {
+        op_r_r<Op>(reg8(modrm.rm, inst.rex_present, inst.rex_b), reg, flags);
+        ip += 2;
+    }
+    else
+    {
+        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
+        op_m_r<Op>(dst_address.first, reg, flags);
+        ip += 2 + dst_address.second;
+    }
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
+    return ip;
+}
+
+template<typename Op>
+ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
     flag_t flags = 0;
@@ -621,69 +653,42 @@ template<typename Op> ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        auto& dst = reg8(modrm.rm, inst.rex_present, inst.rex_b);
-        auto result = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
-        if constexpr (Op::STORE_RESULT)
-        {
-            dst = result;
-        }
-        ip += 2;
-    }
-    else
-    {
-        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        uint8_t dst = load<uint8_t>(dst_address.first);
-        dst = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
-        if constexpr (Op::STORE_RESULT)
-        {
-            store(dst_address.first, dst);
-        }
-        ip += 2 + dst_address.second;
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
-    }
-    return ip;
-}
-
-ptr_t CPU::execute_MOV_89(Instruction& inst, ptr_t ip)
-{
-    auto p = get_instruction_address(ip);
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
-    if (modrm.mod == MOD_DIRECT_REGISTER)
-    {
         if (inst.operand_size_override)
         {
-            reg16(modrm.rm) = reg16(modrm.reg);
+            op_r_r<Op>(reg16(modrm.rm), reg16(modrm.reg), flags);
         }
         else if (inst.rex_w)
         {
-            reg64(modrm.rm, inst.rex_b) = reg64(modrm.reg, inst.rex_r);
+            op_r_r<Op>(reg64(modrm.rm, inst.rex_b), reg64(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            reg32(modrm.rm) = reg32(modrm.reg);
+            op_r_r<Op>(reg32(modrm.rm), reg32(modrm.reg), flags);
         }
-        return ip + 2;
+        ip += 2;
     }
     else
     {
         auto dst = decode_address(modrm.mod, modrm.rm, inst, p + 1);
         if (inst.operand_size_override)
         {
-            store(dst.first, reg16(modrm.reg));
+            op_m_r<Op>(dst.first, reg16(modrm.reg), flags);
         }
         else if (inst.rex_w)
         {
-            store(dst.first, reg64(modrm.reg, inst.rex_r));
+            op_m_r<Op>(dst.first, reg64(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            store(dst.first, reg32(modrm.reg));
+            op_m_r<Op>(dst.first, reg32(modrm.reg), flags);
         }
-        return ip + 2 + dst.second;
+        ip += 2 + dst.second;
     }
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
+    return ip;
 }
 
 ptr_t CPU::execute_MOV_8A(Instruction& inst, ptr_t ip)

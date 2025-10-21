@@ -45,7 +45,7 @@ namespace cpu::X86_64
         void store(ptr_t address, T);
 
         template<typename T>
-        T load(ptr_t address);
+        T load(ptr_t address) const;
 
         using Executor = ptr_t(CPU::*)(Instruction&, ptr_t ip);
         struct OpCode {
@@ -63,7 +63,7 @@ namespace cpu::X86_64
         template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_eax_imm32(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm8_r8(Instruction&, ptr_t ip);
-        ptr_t execute_MOV_89(Instruction&, ptr_t ip); // MOV r/m32, r32
+        template<typename Op> ptr_t op_rm32_r32(Instruction&, ptr_t ip);
         ptr_t execute_MOV_8A(Instruction&, ptr_t ip); // MOV r8, r/m8
         ptr_t execute_MOV_8B(Instruction&, ptr_t ip); // MOV r32, r/m32
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
@@ -79,6 +79,12 @@ namespace cpu::X86_64
         ptr_t execute_CLD_FC(Instruction&, ptr_t ip);
         ptr_t execute_STD_FD(Instruction&, ptr_t ip);
         ptr_t execute_0F(Instruction&, ptr_t ip);
+
+        template<typename Op, typename T>
+        static void op_r_r(T& first, T second, cpu::X86_64::flag_t& flags);
+
+        template<typename Op, typename T>
+        void op_m_r(ptr_t first, T second, cpu::X86_64::flag_t& flags);
 
         /**
          * Forwards a syscall to the kernel instance
