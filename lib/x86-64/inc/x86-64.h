@@ -62,7 +62,7 @@ namespace cpu::X86_64
         ptr_t decode_prefix(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_eax_imm32(Instruction&, ptr_t ip);
-        ptr_t execute_MOV_88(Instruction&, ptr_t ip); // MOV r/m8, r8
+        template<typename Op> ptr_t op_rm8_r8(Instruction&, ptr_t ip);
         ptr_t execute_MOV_89(Instruction&, ptr_t ip); // MOV r/m32, r32
         ptr_t execute_MOV_8A(Instruction&, ptr_t ip); // MOV r8, r/m8
         ptr_t execute_MOV_8B(Instruction&, ptr_t ip); // MOV r32, r/m32

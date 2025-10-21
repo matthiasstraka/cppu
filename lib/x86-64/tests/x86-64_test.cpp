@@ -376,6 +376,31 @@ BOOST_AUTO_TEST_CASE(add_eax_imm_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
 }
 
+BOOST_AUTO_TEST_CASE(add_rm8_r8_test)
+{
+    std::uint8_t inst[] = {
+        0x00, 0xd8, // add al, bl
+        0x00, 0xc4, // add ah, bl
+        0x00, 0x41, 1, // add [rcx + 1], al
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RBX, 0x05);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x0005);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x0505);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add [rcx + 1], al
+    BOOST_CHECK_EQUAL(inst[1], 0xd8 + 0x05);
+}
+
 BOOST_AUTO_TEST_CASE(add_jnz_imm_test)
 {
     const std::uint8_t inst[] = {

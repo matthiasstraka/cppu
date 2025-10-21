@@ -35,7 +35,7 @@ enum Rex
 
 std::array<CPU::OpCode, 256> CPU::s_opcodes = {
 // 00-0F
-    0,
+    &CPU::op_rm8_r8<OpAdd>, // 0x00 ADD r/m8, r8
     0,
     0,
     0,
@@ -43,7 +43,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_eax_imm32<OpAdd>,
     0,
     0,
-    0,
+    &CPU::op_rm8_r8<OpOr>, // 0x08 OR r/m8, r8
     0,
     0,
     0,
@@ -52,7 +52,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     &CPU::execute_0F,
 // 10-1F
-    0,
+    &CPU::op_rm8_r8<OpAdc>, // 0x10 ADC r/m8, r8
     0,
     0,
     0,
@@ -60,7 +60,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_eax_imm32<OpAdc>, // 0x15 ADC EAX, imm32
     0,
     0,
-    0,
+    &CPU::op_rm8_r8<OpSbb>, // 0x18 SBB r/m8, r8
     0,
     0,
     0,
@@ -69,7 +69,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
 // 20-2F
-    0,
+    &CPU::op_rm8_r8<OpAnd>, // 0x20 AND r/m8, r8
     0,
     0,
     0,
@@ -77,7 +77,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_eax_imm32<OpAnd>,
     0,
     0,
-    0,
+    &CPU::op_rm8_r8<OpSub>, // 0x28 SUB r/m8, r8
     0,
     0,
     0,
@@ -86,7 +86,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
 // 30-3F
-    0,
+    &CPU::op_rm8_r8<OpXor>, // 0x30 XOR r/m8, r8
     0,
     0,
     0,
@@ -179,7 +179,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::execute_MOV_88,
+    &CPU::op_rm8_r8<OpMov>, // 0x88 MOV r/m8, r8
     &CPU::execute_MOV_89,
     &CPU::execute_MOV_8A,
     &CPU::execute_MOV_8B,
@@ -477,17 +477,28 @@ void CPU::execute_next()
 template<typename Op>
 ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = m_flags;
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
     auto& dst = reg8(REG_RAX, false, false);
     dst = Op::call(dst, fetch_imm<uint8_t>(ip + 1), flags);
-    m_flags = flags;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
     return ip + 2;
 }
 
 template<typename Op>
 ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = m_flags;
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
     if (inst.operand_size_override)
     {
         auto& dst = reg16(REG_RAX);
@@ -506,7 +517,10 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
         dst = Op::call(dst, fetch_imm<uint32_t>(ip + 1), flags);
         ip += 5;
     }
-    m_flags = flags;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
     return ip;
 }
 
@@ -580,21 +594,34 @@ ptr_t CPU::execute_Jcc_7x(Instruction& instruction, ptr_t ip)
     return next;
 }
 
-ptr_t CPU::execute_MOV_88(Instruction& inst, ptr_t ip)
+template<typename Op> ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        reg8(modrm.rm, inst.rex_present, inst.rex_b) = reg8(modrm.reg, inst.rex_present, inst.rex_r);
-        return ip + 2;
+        auto& dst = reg8(modrm.rm, inst.rex_present, inst.rex_b);
+        dst = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
+        ip += 2;
     }
     else
     {
-        auto dst = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        store(dst.first, reg8(modrm.reg, inst.rex_present, inst.rex_r));
-        return ip + 2 + dst.second;
+        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
+        uint8_t dst = load<uint8_t>(dst_address.first);
+        dst = Op::call(dst, reg8(modrm.reg, inst.rex_present, inst.rex_r), flags);
+        store(dst_address.first, dst);
+        ip += 2 + dst_address.second;
     }
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
+    return ip;
 }
 
 ptr_t CPU::execute_MOV_89(Instruction& inst, ptr_t ip)
