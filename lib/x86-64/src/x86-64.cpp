@@ -1,7 +1,6 @@
 #include "x86-64.h"
 #include "x86-64_ops.h"
 #include "x86-64_structs.h"
-#include "x86-64_utils.h"
 
 #include <bit>
 #include <cassert>

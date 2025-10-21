@@ -8,7 +8,7 @@
 #include <immintrin.h>
 #endif
 
-namespace cpu::utils
+namespace cpu_utils
 {
     template<typename T>
     void set_bit(T& value, std::size_t mask, bool set)

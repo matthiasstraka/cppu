@@ -1,23 +1,15 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(x86-64)
+project(cpu_utils)
 
 add_library(${PROJECT_NAME} STATIC
-  inc/x86-64.h
-  inc/x86-64_ops.h
-  inc/x86-64_structs.h
-  inc/x86-64_types.h
-  src/x86-64.cpp
+  inc/carry_addsub.h
+  src/cpu_utils.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 target_include_directories(${PROJECT_NAME}
     PUBLIC inc/
-)
-
-target_link_libraries(${PROJECT_NAME}
-  libkernel
-  cpu_utils
 )
 
 # Unit tests

@@ -12,14 +12,14 @@ find_package(Boost REQUIRED
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(${PROJECT_UNIT_TESTS_NAME}
-    x86-64_test.cpp
+    carry_addsub_test.cpp
     test_main.cpp
 )
 
 set_property(TARGET ${PROJECT_UNIT_TESTS_NAME} PROPERTY CXX_STANDARD 20)
 target_link_libraries(${PROJECT_UNIT_TESTS_NAME} PRIVATE
     Boost::unit_test_framework
-    x86-64
+    cpu_utils
 )
 
 add_test(NAME ${PROJECT_UNIT_TESTS_NAME} COMMAND ${PROJECT_UNIT_TESTS_NAME})

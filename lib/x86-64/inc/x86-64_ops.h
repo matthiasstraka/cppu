@@ -1,7 +1,7 @@
 #pragma once
 
 #include "x86-64_types.h"
-#include "x86-64_utils.h"
+#include "carry_addsub.h"
 #include <cstdint>
 #include <utility>
 
@@ -23,7 +23,7 @@ namespace cpu::X86_64
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
-            bool cf = utils::add_with_carry(false, dst, imm);
+            bool cf = cpu_utils::add_with_carry(false, dst, imm);
             update_flags(flags, dst, cf);
             return dst;
         }
@@ -34,7 +34,7 @@ namespace cpu::X86_64
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
-            bool cf = utils::add_with_carry((flags & FLAG_CF) == FLAG_CF, dst, imm);
+            bool cf = cpu_utils::add_with_carry((flags & FLAG_CF) == FLAG_CF, dst, imm);
             update_flags(flags, dst, cf);
             return dst;
         }
@@ -67,7 +67,7 @@ namespace cpu::X86_64
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
-            bool cf = utils::sub_with_borrow(false, dst, imm);
+            bool cf = cpu_utils::sub_with_borrow(false, dst, imm);
             update_flags(flags, dst, cf);
             return dst;
         }
@@ -78,7 +78,7 @@ namespace cpu::X86_64
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
-            bool cf = utils::sub_with_borrow((flags & FLAG_CF) == FLAG_CF, dst, imm);
+            bool cf = cpu_utils::sub_with_borrow((flags & FLAG_CF) == FLAG_CF, dst, imm);
             update_flags(flags, dst, cf);
             return dst;
         }

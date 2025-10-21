@@ -1,8 +1,8 @@
 #include <boost/test/unit_test.hpp>
 
-#include "x86-64_utils.h"
+#include "carry_addsub.h"
 
-using namespace cpu::utils;
+using namespace cpu_utils;
 
 BOOST_AUTO_TEST_SUITE(utils_test_suite)
 
