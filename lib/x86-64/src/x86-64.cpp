@@ -181,8 +181,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     &CPU::op_rm8_r8<OpMov>,   // 0x88 MOV r/m8, r8
     &CPU::op_rm32_r32<OpMov>, // 0x89 MOV r/m32, r32
-    &CPU::execute_MOV_8A,
-    &CPU::execute_MOV_8B,
+    &CPU::op_r8_rm8<OpMov>,   // 0x8A MOV r8, r/m8
+    &CPU::op_r32_rm32<OpMov>, // 0x8B MOV r32, r/m32
     0,
     0,
     0,
@@ -691,60 +691,85 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
     return ip;
 }
 
-ptr_t CPU::execute_MOV_8A(Instruction& inst, ptr_t ip)
+template<typename Op>
+ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    uint8_t& dst = reg8(modrm.reg, inst.rex_present, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        reg8(modrm.rm, inst.rex_present, inst.rex_b) = reg8(modrm.reg, inst.rex_present, inst.rex_r);
-        return ip + 2;
+        uint8_t reg = reg8(modrm.rm, inst.rex_present, inst.rex_b);
+        op_r_r<Op>(dst, reg, flags);
+        ip += 2;
     }
     else
     {
         auto src = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        reg8(modrm.reg, inst.rex_present, inst.rex_r) = load<uint8_t>(src.first);
-        return ip + 2 + src.second;
+        uint8_t val = load<uint8_t>(src.first);
+        op_r_r<Op>(dst, val, flags);
+        ip += 2 + src.second;
     }
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
+    return ip;
 }
 
-ptr_t CPU::execute_MOV_8B(Instruction& inst, ptr_t ip)
+template<typename Op>
+ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
+    flag_t flags = 0;
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        flags = m_flags;
+    }
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
         {
-            reg16(modrm.reg) = reg16(modrm.rm);
+            op_r_r<Op>(reg16(modrm.reg), reg16(modrm.rm), flags);
         }
         else if (inst.rex_w)
         {
-            reg64(modrm.reg, inst.rex_r) = reg64(modrm.rm, inst.rex_b);
+            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), reg64(modrm.rm, inst.rex_b), flags);
         }
         else
         {
-            reg32(modrm.reg) = reg32(modrm.rm);
+            op_r_r<Op>(reg32(modrm.reg), reg32(modrm.rm), flags);
         }
-        return ip + 2;
+        ip += 2;
     }
     else
     {
         auto src = decode_address(modrm.mod, modrm.rm, inst, p + 1);
         if (inst.operand_size_override)
         {
-            reg16(modrm.reg) = load<uint16_t>(src.first);
+            op_r_r<Op>(reg16(modrm.reg), load<uint16_t>(src.first), flags);
         }
         else if (inst.rex_w)
         {
-            reg64(modrm.reg, inst.rex_r) = load<uint64_t>(src.first);
+            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), load<uint64_t>(src.first), flags);
         }
         else
         {
-            reg32(modrm.reg) = load<uint32_t>(src.first);
+            op_r_r<Op>(reg32(modrm.reg), load<uint32_t>(src.first), flags);
         }
-        return ip + 2 + src.second;
+        ip += 2 + src.second;
     }
+    if constexpr (Op::AFFECTED_FLAGS)
+    {
+        m_flags = flags;
+    }
+    return ip;
 }
 
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
