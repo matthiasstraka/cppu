@@ -377,7 +377,11 @@ void CPU::op_r_r(T& first, T second, cpu::X86_64::flag_t& flags)
 template<typename Op, typename T>
 void CPU::op_m_r(ptr_t first_addr, T second, cpu::X86_64::flag_t& flags)
 {
-    T first = load<T>(first_addr);
+    T first;
+    if constexpr (Op::LOAD_FIRST)
+    {
+        first = load<T>(first_addr);
+    }
     first = Op::call(first, second, flags);
     if constexpr (Op::STORE_RESULT)
     {

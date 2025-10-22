@@ -18,10 +18,16 @@ namespace cpu::X86_64
         // TODO: OF, AF, PF
     }
 
-    struct OpAdd
+    struct Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = 0;
+        static constexpr bool LOAD_FIRST = true;
+        static constexpr bool STORE_RESULT = true;
+    };
+
+    struct OpAdd : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -31,10 +37,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpAdc
+    struct OpAdc : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -44,10 +49,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpAnd
+    struct OpAnd : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -57,10 +61,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpMov
+    struct OpMov : Op
     {
-        static constexpr flag_t AFFECTED_FLAGS = 0;
-        static constexpr bool STORE_RESULT = true;
+        static constexpr bool LOAD_FIRST = false;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -68,10 +71,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpOr
+    struct OpOr : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -81,10 +83,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpSub
+    struct OpSub : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -94,10 +95,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpSbb
+    struct OpSbb : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
@@ -107,7 +107,7 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpTest
+    struct OpTest : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         static constexpr bool STORE_RESULT = false;
@@ -119,10 +119,9 @@ namespace cpu::X86_64
         }
     };
 
-    struct OpXor
+    struct OpXor : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = true;
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
