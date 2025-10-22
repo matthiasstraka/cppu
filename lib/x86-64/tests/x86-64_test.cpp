@@ -322,6 +322,34 @@ BOOST_AUTO_TEST_CASE(add_sub_al_imm_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
 }
 
+BOOST_AUTO_TEST_CASE(add_rax_imm_test)
+{
+    const std::uint8_t inst[] = {
+        0x04, 0xff, // add al, -1
+        0x66, 0x05, 0xff, 0xff, // add ax, -1
+        0x05, 0xff, 0xff, 0xff, 0xff, // add eax, -1
+        0x48, 0x05, 0xff, 0xff, 0xff, 0xff, // add rax, -1
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RAX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint8_t>(-1));
+
+    cpu.setRegister(REG_RAX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint16_t>(-1));
+
+    cpu.setRegister(REG_RAX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint32_t>(-1));
+
+    cpu.setRegister(REG_RAX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint64_t>(-1));
+}
+
 BOOST_AUTO_TEST_CASE(adc_al_imm_test)
 {
     const std::uint8_t inst[] = {
@@ -376,12 +404,13 @@ BOOST_AUTO_TEST_CASE(add_eax_imm_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
 }
 
-BOOST_AUTO_TEST_CASE(add_rm8_r8_test)
+BOOST_AUTO_TEST_CASE(add_op_test)
 {
     std::uint8_t inst[] = {
         0x00, 0xd8, // add al, bl
         0x00, 0xc4, // add ah, bl
         0x00, 0x41, 1, // add [rcx + 1], al
+        0x66, 0x03, 0x12, // add dx, [rdx]
     };
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
@@ -399,6 +428,10 @@ BOOST_AUTO_TEST_CASE(add_rm8_r8_test)
 
     BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add [rcx + 1], al
     BOOST_CHECK_EQUAL(inst[1], 0xd8 + 0x05);
+
+    cpu.setRegister(REG_RDX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add dx, [rdx]
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint16_t*>(inst), 0xdd00);
 }
 
 BOOST_AUTO_TEST_CASE(add_jnz_imm_test)

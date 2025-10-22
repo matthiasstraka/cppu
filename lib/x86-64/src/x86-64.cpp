@@ -35,63 +35,63 @@ enum Rex
 
 std::array<CPU::OpCode, 256> CPU::s_opcodes = {
 // 00-0F
-    &CPU::op_rm8_r8<OpAdd>, // 0x00 ADD r/m8, r8
+    &CPU::op_rm8_r8<OpAdd>,   // 0x00 ADD r/m8, r8
+    &CPU::op_rm32_r32<OpAdd>, // 0x01 ADD r/m32, r32
+    &CPU::op_r8_rm8<OpAdd>,   // 0x02 ADD r8, r/m8
+    &CPU::op_r32_rm32<OpAdd>, // 0x03 ADD r32, r/m32
+    &CPU::op_al_imm8<OpAdd>,  // 0x04 ADD AL, imm8
+    &CPU::op_eax_imm32<OpAdd>,// 0x05 ADD EAX, imm32
     0,
     0,
-    0,
-    &CPU::op_al_imm8<OpAdd>,
-    &CPU::op_eax_imm32<OpAdd>,
-    0,
-    0,
-    &CPU::op_rm8_r8<OpOr>, // 0x08 OR r/m8, r8
-    0,
-    0,
-    0,
-    &CPU::op_al_imm8<OpOr>,
-    &CPU::op_eax_imm32<OpOr>,
+    &CPU::op_rm8_r8<OpOr>,   // 0x08 OR r/m8, r8
+    &CPU::op_rm32_r32<OpOr>, // 0x09 OR r/m32, r32
+    &CPU::op_r8_rm8<OpOr>,   // 0x0A OR r8, r/m8
+    &CPU::op_r32_rm32<OpOr>, // 0x0B OR r32, r/m32
+    &CPU::op_al_imm8<OpOr>,  // 0x0C OR AL, imm8
+    &CPU::op_eax_imm32<OpOr>,// 0x0D OR EAX, imm32
     0,
     &CPU::execute_0F,
 // 10-1F
-    &CPU::op_rm8_r8<OpAdc>, // 0x10 ADC r/m8, r8
-    0,
-    0,
-    0,
+    &CPU::op_rm8_r8<OpAdc>,   // 0x10 ADC r/m8, r8
+    &CPU::op_rm32_r32<OpAdc>, // 0x11 ADC r/m8, r8
+    &CPU::op_r8_rm8<OpAdc>,   // 0x12 ADC r8, r/m8
+    &CPU::op_r32_rm32<OpAdc>, // 0x13 ADC r8, r/m8
     &CPU::op_al_imm8<OpAdc>,   // 0x14 ADC AL, imm8
     &CPU::op_eax_imm32<OpAdc>, // 0x15 ADC EAX, imm32
     0,
     0,
-    &CPU::op_rm8_r8<OpSbb>, // 0x18 SBB r/m8, r8
-    0,
-    0,
-    0,
-    &CPU::op_al_imm8<OpSbb>,   // 0x1C SBB AL, imm8
-    &CPU::op_eax_imm32<OpSbb>, // 0x1D SBB EAX, imm32
+    &CPU::op_rm8_r8<OpSbb>,   // 0x18 SBB r/m8, r8
+    &CPU::op_rm32_r32<OpSbb>, // 0x19 SBB r/m32, r32
+    &CPU::op_r8_rm8<OpSbb>,   // 0x1A SBB r8, r/m8
+    &CPU::op_r32_rm32<OpSbb>, // 0x1B SBB r32, r/m32
+    &CPU::op_al_imm8<OpSbb>,  // 0x1C SBB AL, imm8
+    &CPU::op_eax_imm32<OpSbb>,// 0x1D SBB EAX, imm32
     0,
     0,
 // 20-2F
-    &CPU::op_rm8_r8<OpAnd>, // 0x20 AND r/m8, r8
+    &CPU::op_rm8_r8<OpAnd>,   // 0x20 AND r/m8, r8
+    &CPU::op_rm32_r32<OpAnd>, // 0x21 AND r/m32, r32
+    &CPU::op_r8_rm8<OpAnd>,   // 0x22 AND r8, r/m8
+    &CPU::op_r32_rm32<OpAnd>, // 0x23 AND r8, r/m8
+    &CPU::op_al_imm8<OpAnd>,  // 0x24 AND AL, imm8
+    &CPU::op_eax_imm32<OpAnd>,// 0x25 AND EAX, imm32
     0,
     0,
-    0,
-    &CPU::op_al_imm8<OpAnd>,
-    &CPU::op_eax_imm32<OpAnd>,
-    0,
-    0,
-    &CPU::op_rm8_r8<OpSub>, // 0x28 SUB r/m8, r8
-    0,
-    0,
-    0,
+    &CPU::op_rm8_r8<OpSub>,   // 0x28 SUB r/m8, r8
+    &CPU::op_rm32_r32<OpSub>, // 0x29 SUB r/m32, r32
+    &CPU::op_r8_rm8<OpSub>,   // 0x2A SUB r8, r/m8
+    &CPU::op_r32_rm32<OpSub>, // 0x2B SUB r32, r/m32
     &CPU::op_al_imm8<OpSub>,   // 0x2C SUB AL, imm8
     &CPU::op_eax_imm32<OpSub>, // 0x1D SUB EAX, imm32
     0,
     0,
 // 30-3F
-    &CPU::op_rm8_r8<OpXor>, // 0x30 XOR r/m8, r8
-    0,
-    0,
-    0,
-    &CPU::op_al_imm8<OpXor>,
-    &CPU::op_eax_imm32<OpXor>,
+    &CPU::op_rm8_r8<OpXor>,   // 0x30 XOR r/m8, r8
+    &CPU::op_rm32_r32<OpXor>, // 0x31 XOR r/m32, r32
+    &CPU::op_r8_rm8<OpXor>,   // 0x32 XOR r8, r/m8
+    &CPU::op_r32_rm32<OpXor>, // 0x33 XOR r32, r/m32
+    &CPU::op_al_imm8<OpXor>,  // 0x34 XOR AL, imm8
+    &CPU::op_eax_imm32<OpXor>,// 0x35 XOR EAX, imm32
     0,
     0,
     0,
@@ -175,8 +175,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::op_rm8_r8<OpTest>, // 0x84 TEST r/m8, r8
-    0,
+    &CPU::op_rm8_r8<OpTest>,   // 0x84 TEST r/m8, r8
+    &CPU::op_rm32_r32<OpTest>, // 0x85 TEST r/m8, r8
     0,
     0,
     &CPU::op_rm8_r8<OpMov>,   // 0x88 MOV r/m8, r8
@@ -213,7 +213,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::op_al_imm8<OpTest>, // 0xA8 TEST AL, imm8
+    &CPU::op_al_imm8<OpTest>,   // 0xA8 TEST AL, imm8
     &CPU::op_eax_imm32<OpTest>, // 0xA9 TEST EAX, imm32
     0,
     0,
@@ -529,14 +529,18 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
         op_r_r<Op>(reg16(REG_RAX), fetch_imm<uint16_t>(ip + 1), flags);
         ip += 3;
     }
-    else if (inst.rex_w)
-    {
-        op_r_r<Op>(reg64(REG_RAX, inst.rex_b), fetch_imm<uint64_t>(ip + 1), flags);
-        ip += 9;
-    }
     else
     {
-        op_r_r<Op>(reg32(REG_RAX), fetch_imm<uint32_t>(ip + 1), flags);
+        uint32_t imm32 = fetch_imm<uint32_t>(ip + 1);
+        if (inst.rex_w)
+        {
+            uint64_t imm64 = static_cast<int64_t>(static_cast<int32_t>(imm32));
+            op_r_r<Op>(reg64(REG_RAX, inst.rex_b), imm64, flags);
+        }
+        else
+        {
+            op_r_r<Op>(reg32(REG_RAX), imm32, flags);
+        }
         ip += 5;
     }
     if constexpr (Op::AFFECTED_FLAGS)
