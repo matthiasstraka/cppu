@@ -71,13 +71,9 @@ namespace cpu::X86_64
         ptr_t execute_Jcc_7x(Instruction&, ptr_t ip);
         ptr_t execute_JMP(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
-        ptr_t execute_CMC_F5(Instruction&, ptr_t ip);
-        ptr_t execute_CLC_F8(Instruction&, ptr_t ip);
-        ptr_t execute_STC_F9(Instruction&, ptr_t ip);
-        ptr_t execute_CLI_FA(Instruction&, ptr_t ip);
-        ptr_t execute_STI_FB(Instruction&, ptr_t ip);
-        ptr_t execute_CLD_FC(Instruction&, ptr_t ip);
-        ptr_t execute_STD_FD(Instruction&, ptr_t ip);
+        template<flag_t flag> ptr_t op_clear_flag(Instruction&, ptr_t ip);
+        template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
+        template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);
         ptr_t execute_0F(Instruction&, ptr_t ip);
 
         template<typename Op, typename T>

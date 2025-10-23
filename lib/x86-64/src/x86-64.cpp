@@ -281,15 +281,15 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     { &CPU::decode_prefix<0xF2>, true },
     { &CPU::decode_prefix<0xF3>, true },
     &CPU::execute_HLT_F4,
-    &CPU::execute_CMC_F5,
+    &CPU::op_complement_flag<FLAG_CF>, // 0xF5 CMC
     0,
     0,
-    &CPU::execute_CLC_F8,
-    &CPU::execute_STC_F9,
-    &CPU::execute_CLI_FA,
-    &CPU::execute_STI_FB,
-    &CPU::execute_CLD_FC,
-    &CPU::execute_STD_FD,
+    &CPU::op_clear_flag<FLAG_CF>, // 0xF8 CLC
+    &CPU::op_set_flag<FLAG_CF>,   // 0xF9 STC
+    &CPU::op_clear_flag<FLAG_IF>, // 0xFA CLI
+    &CPU::op_set_flag<FLAG_IF>,   // 0xFB STI
+    &CPU::op_clear_flag<FLAG_DF>, // 0xFC CLD
+    &CPU::op_set_flag<FLAG_DF>,   // 0xFD STD
     0,
     0,
 };
@@ -821,13 +821,27 @@ ptr_t CPU::execute_JMP(Instruction& instruction, ptr_t ip)
 }
 
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
-ptr_t CPU::execute_CMC_F5(Instruction& i, ptr_t ip) { m_flags ^=  FLAG_CF; return ip + 1; }
-ptr_t CPU::execute_CLC_F8(Instruction& i, ptr_t ip) { m_flags &= ~FLAG_CF; return ip + 1; }
-ptr_t CPU::execute_STC_F9(Instruction& i, ptr_t ip) { m_flags |=  FLAG_CF; return ip + 1; }
-ptr_t CPU::execute_CLI_FA(Instruction& i, ptr_t ip) { m_flags &= ~FLAG_IF; return ip + 1; }
-ptr_t CPU::execute_STI_FB(Instruction& i, ptr_t ip) { m_flags |=  FLAG_IF; return ip + 1; }
-ptr_t CPU::execute_CLD_FC(Instruction& i, ptr_t ip) { m_flags &= ~FLAG_DF; return ip + 1; }
-ptr_t CPU::execute_STD_FD(Instruction& i, ptr_t ip) { m_flags |=  FLAG_DF; return ip + 1; }
+
+template<cpu::X86_64::flag_t flag>
+ptr_t CPU::op_clear_flag(Instruction&, ptr_t ip)
+{
+    m_flags &= ~flag;
+    return ip + 1;
+}
+
+template<cpu::X86_64::flag_t flag>
+ptr_t CPU::op_set_flag(Instruction&, ptr_t ip)
+{
+    m_flags |= flag;
+    return ip + 1;
+}
+
+template<cpu::X86_64::flag_t flag>
+ptr_t CPU::op_complement_flag(Instruction&, ptr_t ip)
+{
+    m_flags ^= flag;
+    return ip + 1;
+}
 
 ptr_t CPU::execute_0F(Instruction&, ptr_t ip)
 {
