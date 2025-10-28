@@ -154,22 +154,22 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
 // 70-7F
-    0,
-    &CPU::execute_Jcc_7x, // 71
-    &CPU::execute_Jcc_7x, // 72
-    &CPU::execute_Jcc_7x, // 73
-    &CPU::execute_Jcc_7x, // 74
-    &CPU::execute_Jcc_7x, // 75
-    &CPU::execute_Jcc_7x, // 76
-    &CPU::execute_Jcc_7x, // 77
-    &CPU::execute_Jcc_7x, // 78
-    &CPU::execute_Jcc_7x, // 79
-    &CPU::execute_Jcc_7x, // 7A
-    &CPU::execute_Jcc_7x, // 7B
-    &CPU::execute_Jcc_7x, // 7C
-    &CPU::execute_Jcc_7x, // 7D
-    &CPU::execute_Jcc_7x, // 7E
-    &CPU::execute_Jcc_7x, // 7F
+    &CPU::op_jmp_cond<CondO>,  // 0x70 JO rel8
+    &CPU::op_jmp_cond<CondNO>, // 0x71 JNO rel8
+    &CPU::op_jmp_cond<CondC>,  // 0x72 JB rel8
+    &CPU::op_jmp_cond<CondNC>, // 0x73 JNB rel8
+    &CPU::op_jmp_cond<CondZ>,  // 0x75 JZ rel8
+    &CPU::op_jmp_cond<CondNZ>, // 0x75 JNZ rel8
+    &CPU::op_jmp_cond<CondBE>, // 0x76 JBE rel8
+    &CPU::op_jmp_cond<CondA>,  // 0x77 JA rel8
+    &CPU::op_jmp_cond<CondS>,  // 0x78 JS rel8
+    &CPU::op_jmp_cond<CondNS>, // 0x79 JNS rel8
+    &CPU::op_jmp_cond<CondP>,  // 0x7A JP rel8
+    &CPU::op_jmp_cond<CondNP>, // 0x7B JNP rel8
+    &CPU::op_jmp_cond<CondL>,  // 0x7C JL rel8
+    &CPU::op_jmp_cond<CondGE>, // 0x7D JGE rel8
+    &CPU::op_jmp_cond<CondLE>, // 0x7E JLE rel8
+    &CPU::op_jmp_cond<CondG>,  // 0x7F JLE rel8
 // 80-8F
     0,
     0,
@@ -550,74 +550,15 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     return ip;
 }
 
-ptr_t CPU::execute_Jcc_7x(Instruction& instruction, ptr_t ip)
+template<typename Cond>
+ptr_t CPU::op_jmp_cond(Instruction&, ptr_t ip)
 {
-    auto next = ip + 2;
-    auto p = get_instruction_address(ip);
-    auto imm8 = reinterpret_cast<const std::int8_t*>(p + 1);
-    switch(p[0])
+    if (Cond::test(m_flags))
     {
-    case 0x72: //JB rel8 / JC rel8
-        if ((m_flags & FLAG_CF) == FLAG_CF)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x73: //JAE rel8
-        if ((m_flags & FLAG_CF) == 0)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x74: //JE rel8
-        if ((m_flags & FLAG_ZF) == FLAG_ZF)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x75: //JNE rel8
-        if ((m_flags & FLAG_ZF) == 0)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x76: //JBE rel8
-        if ((m_flags & (FLAG_CF | FLAG_ZF)) != 0)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x77: //JA rel8
-        if ((m_flags & (FLAG_CF | FLAG_ZF)) == 0)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x78: //JS rel8
-        if ((m_flags & FLAG_SF) == FLAG_SF)
-        {
-            next += *imm8;
-        }
-        break;
-
-    case 0x79: //JNS rel8
-        if ((m_flags & FLAG_SF) == 0)
-        {
-            next += *imm8;
-        }
-        break;
-
-    default:
-        throw std::runtime_error("unsupported instruction");
+        auto imm8 = reinterpret_cast<const std::int8_t*>(get_instruction_address(ip + 1));
+        return ip + *imm8 + 2;
     }
-
-    return next;
+    return ip + 2;
 }
 
 template<typename Op>

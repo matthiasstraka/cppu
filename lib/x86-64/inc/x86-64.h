@@ -68,12 +68,12 @@ namespace cpu::X86_64
         template<typename Op> ptr_t op_r32_rm32(Instruction&, ptr_t ip);
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
-        ptr_t execute_Jcc_7x(Instruction&, ptr_t ip);
         ptr_t execute_JMP(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_clear_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);
+        template<typename Cond> ptr_t op_jmp_cond(Instruction&, ptr_t ip);
         ptr_t execute_0F(Instruction&, ptr_t ip);
 
         template<typename Op, typename T>

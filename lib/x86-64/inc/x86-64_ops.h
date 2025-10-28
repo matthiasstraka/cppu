@@ -130,4 +130,73 @@ namespace cpu::X86_64
             return dst;
         }
     };
+
+    struct Condition
+    {
+    };
+
+    struct CondA : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & (FLAG_CF | FLAG_ZF)) == 0; }
+    };
+    struct CondNC : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_CF) == 0; }
+    };
+    struct CondC : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_CF) == FLAG_CF; }
+    };
+    struct CondBE : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & (FLAG_CF | FLAG_ZF)) != 0; }
+    };
+    struct CondO : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_OF) == FLAG_CF; }
+    };
+    struct CondNO : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_OF) == 0; }
+    };
+    struct CondZ : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_ZF) == FLAG_ZF; }
+    };
+    struct CondNZ : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_ZF) == 0; }
+    };
+    struct CondS : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_SF) == FLAG_SF; }
+    };
+    struct CondNS : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_SF) == 0; }
+    };
+    struct CondP : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_PF) == FLAG_PF; }
+    };
+    struct CondNP : Condition
+    {
+        static inline bool test(flag_t flags) { return (flags & FLAG_PF) == 0; }
+    };
+    struct CondL : Condition
+    {
+        static inline bool test(flag_t flags) { return ((flags & FLAG_SF) == FLAG_SF) != ((flags & FLAG_OF) == FLAG_OF); }
+    };
+    struct CondGE : Condition
+    {
+        static inline bool test(flag_t flags) { return ((flags & FLAG_SF) == FLAG_SF) == ((flags & FLAG_OF) == FLAG_OF); }
+    };
+    struct CondLE : Condition
+    {
+        static inline bool test(flag_t flags) { return ((flags & FLAG_ZF) == FLAG_ZF) || (((flags & FLAG_SF) == FLAG_SF) != ((flags & FLAG_OF) == FLAG_OF)); }
+    };
+    struct CondG : Condition
+    {
+        static inline bool test(flag_t flags) { return ((flags & FLAG_ZF) == 0) && (((flags & FLAG_SF) == FLAG_SF) == ((flags & FLAG_OF) == FLAG_OF)); }
+    };
 }
