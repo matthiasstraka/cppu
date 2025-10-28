@@ -452,6 +452,37 @@ BOOST_AUTO_TEST_CASE(add_jnz_imm_test)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0);
 }
 
+BOOST_AUTO_TEST_CASE(op_rm8_imm8_test)
+{
+    std::uint8_t inst[] = {
+        0x80, 0xc3, 1, // add bl, 1
+        0xf9, // stc
+        0x80, 0xd3, 2, // adc bl, 2
+        0x80, 0xca, 0x33, // or dl, 0x33
+
+        0x80, 0x41, 0x02, 0xff, // add byte [rcx+2], -1
+        0x80, 0x61, 0x01, 0xf0, // and byte [rcx+1], 0xf0
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add bl, 0x1
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 1);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // stc
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // adc bl, 2
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 4);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // or dl, 0x33
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RDX), 0x33);
+
+    BOOST_CHECK_EQUAL(inst[2], 1);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add byte [rcx+2], -1
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0);
+    BOOST_CHECK_EQUAL(inst[2], 0);
+
+    BOOST_CHECK_EQUAL(inst[1], 0xc3);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // and byte [rcx+1], 0xf0
+    BOOST_CHECK_EQUAL(inst[1], 0xc0);
+}
+
 BOOST_AUTO_TEST_CASE(logical_al_imm8_test)
 {
     const std::uint8_t inst[] = {

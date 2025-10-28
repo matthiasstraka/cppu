@@ -171,7 +171,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_jmp_cond<CondLE>, // 0x7E JLE rel8
     &CPU::op_jmp_cond<CondG>,  // 0x7F JLE rel8
 // 80-8F
-    0,
+    &CPU::op_rm8_imm8<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x80 OP r/m8, imm8
     0,
     0,
     0,
@@ -587,6 +587,82 @@ ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
     {
         m_flags = flags;
     }
+    return ip;
+}
+
+template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
+ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    flag_t flags = m_flags;
+    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    if (modrm.mod == MOD_DIRECT_REGISTER)
+    {
+        auto& dst = reg8(modrm.rm, inst.rex_present, inst.rex_b);
+        auto imm8 = p[2];
+        switch (modrm.reg)
+        {
+        case 0:
+            op_r_r<Op0>(dst, imm8, flags);
+            break;
+        case 1:
+            op_r_r<Op1>(dst, imm8, flags);
+            break;
+        case 2:
+            op_r_r<Op2>(dst, imm8, flags);
+            break;
+        case 3:
+            op_r_r<Op3>(dst, imm8, flags);
+            break;
+        case 4:
+            op_r_r<Op4>(dst, imm8, flags);
+            break;
+        case 5:
+            op_r_r<Op5>(dst, imm8, flags);
+            break;
+        case 6:
+            op_r_r<Op6>(dst, imm8, flags);
+            break;
+        case 7:
+            op_r_r<Op7>(dst, imm8, flags);
+            break;
+        }
+        ip += 3;
+    }
+    else
+    {
+        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
+        auto imm8 = p[2+dst_address.second];
+        switch (modrm.reg)
+        {
+        case 0:
+            op_m_r<Op0>(dst_address.first, imm8, flags);
+            break;
+        case 1:
+            op_m_r<Op1>(dst_address.first, imm8, flags);
+            break;
+        case 2:
+            op_m_r<Op2>(dst_address.first, imm8, flags);
+            break;
+        case 3:
+            op_m_r<Op3>(dst_address.first, imm8, flags);
+            break;
+        case 4:
+            op_m_r<Op4>(dst_address.first, imm8, flags);
+            break;
+        case 5:
+            op_m_r<Op5>(dst_address.first, imm8, flags);
+            break;
+        case 6:
+            op_m_r<Op6>(dst_address.first, imm8, flags);
+            break;
+        case 7:
+            op_m_r<Op7>(dst_address.first, imm8, flags);
+            break;
+        }
+        ip += 3 + dst_address.second;
+    }
+    m_flags = flags;
     return ip;
 }
 

@@ -66,6 +66,10 @@ namespace cpu::X86_64
         template<typename Op> ptr_t op_rm32_r32(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_r8_rm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_r32_rm32(Instruction&, ptr_t ip);
+
+        template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
+        ptr_t op_rm8_imm8(Instruction&, ptr_t ip);
+
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
         ptr_t execute_JMP(Instruction&, ptr_t ip);
