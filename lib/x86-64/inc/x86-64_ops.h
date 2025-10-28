@@ -61,6 +61,18 @@ namespace cpu::X86_64
         }
     };
 
+    struct OpCmp : Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        static constexpr bool STORE_RESULT = false;
+        template<typename T>
+        static inline T call(T dst, T imm, flag_t& flags)
+        {
+            update_flags(flags, dst - imm);
+            return 0;
+        }
+    };
+
     struct OpMov : Op
     {
         static constexpr bool LOAD_FIRST = false;
@@ -115,7 +127,7 @@ namespace cpu::X86_64
         static inline T call(T dst, T imm, flag_t& flags)
         {
             update_flags(flags, dst & imm);
-            return dst;
+            return 0;
         }
     };
 

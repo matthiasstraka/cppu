@@ -94,12 +94,12 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_eax_imm32<OpXor>,// 0x35 XOR EAX, imm32
     0,
     0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    &CPU::op_rm8_r8<OpCmp>,   // 0x38 CMP r/m8, r8
+    &CPU::op_rm32_r32<OpCmp>, // 0x39 CMP r/m32, r32
+    &CPU::op_r8_rm8<OpCmp>,   // 0x3A CMP r8, r/m8
+    &CPU::op_r32_rm32<OpCmp>, // 0x3B CMP r32, r/m32
+    &CPU::op_al_imm8<OpCmp>,  // 0x3C CMP AL, imm8
+    &CPU::op_eax_imm32<OpCmp>,// 0x3D CMP EAX, imm32
     0,
     0,
 // 40-4F

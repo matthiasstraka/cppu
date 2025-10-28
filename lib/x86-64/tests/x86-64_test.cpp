@@ -534,6 +534,28 @@ BOOST_AUTO_TEST_CASE(xor_eax_imm32_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, FLAG_SF);
 }
 
+BOOST_AUTO_TEST_CASE(cmp_test)
+{
+    const std::uint8_t inst[] = {
+        0x39, 0xC0, // cmp eax, eax
+        0x39, 0xD8, // cmp eax, edx
+        0x3D, 0xA0, 0, 0, 0, // cmp eax, 0xA0
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RAX, 0xA0);
+    cpu.setRegister(REG_RDX, 4);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CMP EAX, EAX
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CMP EAX, EDX
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // cmp eax, 0xA0
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {
