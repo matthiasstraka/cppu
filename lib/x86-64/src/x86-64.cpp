@@ -237,8 +237,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::execute_INT_N<3>, // 0xCC INT 3
+    &CPU::execute_INT_imm8, // 0xCD INT imm8
     0,
     0,
 // D0-DF
@@ -277,7 +277,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
 // F0-FF
     { &CPU::decode_prefix<0xF0>, true },
-    0,
+    &CPU::execute_INT_N<1>, // 0xF1 INT 1
     { &CPU::decode_prefix<0xF2>, true },
     { &CPU::decode_prefix<0xF3>, true },
     &CPU::execute_HLT_F4,
@@ -865,6 +865,21 @@ ptr_t CPU::execute_JMP(Instruction& instruction, ptr_t ip)
 
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
 
+template<uint8_t N>
+ptr_t CPU::execute_INT_N(Instruction&, ptr_t ip)
+{
+    dispatch_int(N);
+    return ip + 1;
+}
+
+ptr_t CPU::execute_INT_imm8(Instruction&, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    auto imm8 = p[1];
+    dispatch_int(imm8);
+    return ip + 2;
+}
+
 template<cpu::X86_64::flag_t flag>
 ptr_t CPU::op_clear_flag(Instruction&, ptr_t ip)
 {
@@ -932,4 +947,9 @@ void CPU::dispatch_syscall(ptr_t next_ip)
         }
     }
     setRegister(REG_RAX, ret);
+}
+
+void CPU::dispatch_int(uint8_t interrupt)
+{
+    throw std::runtime_error("Not implemented");
 }

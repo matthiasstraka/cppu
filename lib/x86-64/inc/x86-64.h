@@ -78,6 +78,9 @@ namespace cpu::X86_64
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
         ptr_t execute_JMP(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
+        template<uint8_t N>
+        ptr_t execute_INT_N(Instruction&, ptr_t ip);
+        ptr_t execute_INT_imm8(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_clear_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);
@@ -94,6 +97,7 @@ namespace cpu::X86_64
          * Forwards a syscall to the kernel instance
          */
         void dispatch_syscall(ptr_t next_ip);
+        void dispatch_int(uint8_t interrupt);
 
         std::array<register_t, 16> m_registers;
         std::array<std::uint16_t, 6> m_segment_registers;
