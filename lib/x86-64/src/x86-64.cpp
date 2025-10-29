@@ -172,9 +172,9 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_jmp_cond<CondG>,  // 0x7F JLE rel8
 // 80-8F
     &CPU::op_rm8_imm8<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x80 OP r/m8, imm8
+    &CPU::op_rm32_imm32<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x81 OP r/m32, imm32
     0,
-    0,
-    0,
+    &CPU::op_rm32_imm8_sx<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x83 OP r/m8, imm8 (sign-extended)
     &CPU::op_rm8_r8<OpTest>,   // 0x84 TEST r/m8, r8
     &CPU::op_rm32_r32<OpTest>, // 0x85 TEST r/m8, r8
     0,
@@ -662,6 +662,32 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
         }
         ip += 3 + dst_address.second;
     }
+    m_flags = flags;
+    return ip;
+}
+
+template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
+ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    flag_t flags = m_flags;
+    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+
+    throw std::runtime_error("Not implemented");
+
+    m_flags = flags;
+    return ip;
+}
+
+template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
+ptr_t CPU::op_rm32_imm8_sx(Instruction& inst, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    flag_t flags = m_flags;
+    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+
+    throw std::runtime_error("Not implemented");
+
     m_flags = flags;
     return ip;
 }
