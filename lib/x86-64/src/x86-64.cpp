@@ -579,12 +579,6 @@ const std::uint8_t* CPU::get_instruction_address(ptr_t address) const
     return reinterpret_cast<const std::uint8_t*>(address + m_ip_address_offset);
 }
 
-template<typename T>
-const T& CPU::fetch_imm(ptr_t address) const
-{
-    return *reinterpret_cast<const T*>(address + m_ip_address_offset);
-}
-
 uint8_t& CPU::reg8(uint8_t reg, bool with_rex, bool extension)
 {
     assert(reg < 8);
@@ -698,44 +692,6 @@ ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
     return ip + 1;
 }
 
-std::pair<uint64_t, size_t> CPU::decode_address(ModBits mod, uint8_t rm, const Instruction& inst, const uint8_t* p_mod)
-{
-    if (rm == 0x4)
-    {
-        const SIB sib = reinterpret_cast<const SIB&>(p_mod[1]);
-        uint64_t address = (reg64(sib.index, inst.rex_x) << sib.scale) + reg64(sib.base, inst.rex_b);
-        switch (mod)
-        {
-        case MOD_INDIRECT_8BIT:
-            return std::make_pair(address + *reinterpret_cast<const int8_t*>(p_mod + 2), 2u);
-        case MOD_INDIRECT_32BIT:
-            return std::make_pair(address + *reinterpret_cast<const int32_t*>(p_mod + 2), 5u);
-        default:
-            return std::make_pair(address, 1u);
-        }
-    }
-    else if (rm == 5 && mod == 0)
-    {
-        // disp32
-        // TODO: it is unclear if that values needs to be added to something, different assembler make different op-codes
-        throw std::runtime_error("implementation uncertain");
-        return std::make_pair(*reinterpret_cast<const int32_t*>(p_mod + 1), 4u);
-    }
-    else
-    {
-        uint64_t address = reg64(rm, inst.rex_b);
-        switch (mod)
-        {
-        case MOD_INDIRECT_8BIT:
-            return std::make_pair(address + *reinterpret_cast<const int8_t*>(p_mod + 1), 1u);
-        case MOD_INDIRECT_32BIT:
-            return std::make_pair(address + *reinterpret_cast<const int32_t*>(p_mod + 1), 4u);
-        default:
-            return std::make_pair(address, 0);
-        }
-    }
-}
-
 ptr_t CPU::execute_one(ptr_t ip)
 {
     const std::uint8_t* op = translate_instruction_address(ip);
@@ -783,29 +739,88 @@ void CPU::execute_next()
 }
 
 template<bool modrm, int imm_size>
-ptr_t CPU::decode_instruction(Instruction& instruction, ptr_t ip)
+ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
 {
     ++ip;
     auto p = get_instruction_address(ip);
+
+    if constexpr (modrm)
+    {
+        auto mod_rm = *reinterpret_cast<const ModRM*>(p);
+        ++p;
+        ++ip;
+        inst.mod_rm = mod_rm;
+        if (mod_rm.mod != MOD_DIRECT_REGISTER)
+        {
+            int32_t displacement = 0;
+            if (mod_rm.rm == 0x4)
+            {
+                const auto sib = *reinterpret_cast<const SIB*>(p);
+                ++p;
+                ++ip;
+                switch (mod_rm.mod)
+                {
+                case MOD_INDIRECT_8BIT:
+                    displacement = *reinterpret_cast<const int8_t*>(p);
+                    ++p;
+                    ++ip;
+                    break;
+                case MOD_INDIRECT_32BIT:
+                    displacement = *reinterpret_cast<const int32_t*>(p);
+                    p+=4;
+                    ip+=4;
+                    break;
+                }
+                inst.address =
+                    (reg64(sib.index, inst.rex_x) << sib.scale) +
+                    (reg64(sib.base, inst.rex_b)) +
+                    displacement;
+            }
+            else if (mod_rm.rm == 5 && mod_rm.mod == 0)
+            {
+                // disp32
+                // TODO: it is unclear if that values needs to be added to something, different assembler make different op-codes
+                throw std::runtime_error("implementation uncertain");
+            }
+            else
+            {
+                switch (mod_rm.mod)
+                {
+                case MOD_INDIRECT_8BIT:
+                    displacement = *reinterpret_cast<const int8_t*>(p);
+                    ++p;
+                    ++ip;
+                    break;
+                case MOD_INDIRECT_32BIT:
+                    displacement = *reinterpret_cast<const int32_t*>(p);
+                    p+=4;
+                    ip+=4;
+                    break;
+                }
+                inst.address = reg64(mod_rm.rm, inst.rex_b) + displacement;
+            }
+        }
+    }
+
     if constexpr (imm_size == 0)
     {
         // do not read imm
     }
     else if constexpr (imm_size == 1)
     {
-        instruction.imm = *reinterpret_cast<const int8_t*>(p);
+        inst.imm = *reinterpret_cast<const int8_t*>(p);
         ip += 1;
     }
     else
     {
-        if (instruction.operand_size_override)
+        if (inst.operand_size_override)
         {
-            instruction.imm = *reinterpret_cast<const int16_t*>(p);
+            inst.imm = *reinterpret_cast<const int16_t*>(p);
             ip += 2;
         }
         else
         {
-            instruction.imm = *reinterpret_cast<const int32_t*>(p);
+            inst.imm = *reinterpret_cast<const int32_t*>(p);
             ip += 4;
         }
     }
@@ -837,24 +852,22 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     {
         flags = m_flags;
     }
+    ip = decode_instruction<false, 4>(inst, ip);
     if (inst.operand_size_override)
     {
-        op_r_r<Op>(reg16(REG_RAX), fetch_imm<uint16_t>(ip + 1), flags);
-        ip += 3;
+        op_r_r<Op>(reg16(REG_RAX), static_cast<uint16_t>(inst.imm), flags);
     }
     else
     {
-        uint32_t imm32 = fetch_imm<uint32_t>(ip + 1);
         if (inst.rex_w)
         {
-            uint64_t imm64 = static_cast<int64_t>(static_cast<int32_t>(imm32));
+            uint64_t imm64 = static_cast<int64_t>(inst.imm);
             op_r_r<Op>(reg64(REG_RAX, inst.rex_b), imm64, flags);
         }
         else
         {
-            op_r_r<Op>(reg32(REG_RAX), imm32, flags);
+            op_r_r<Op>(reg32(REG_RAX), static_cast<uint32_t>(inst.imm), flags);
         }
-        ip += 5;
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -877,24 +890,21 @@ ptr_t CPU::op_jmp_cond(Instruction& instruction, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
     flag_t flags = 0;
     if constexpr (Op::AFFECTED_FLAGS)
     {
         flags = m_flags;
     }
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
     const uint8_t reg = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         op_r_r<Op>(reg8(modrm.rm, inst.rex != 0, inst.rex_b), reg, flags);
-        ip += 2;
     }
     else
     {
-        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        op_m_r<Op>(dst_address.first, reg, flags);
-        ip += 2 + dst_address.second;
+        op_m_r<Op>(inst.address, reg, flags);
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -906,13 +916,13 @@ ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
 template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
 ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
+    ip = decode_instruction<true, 1>(inst, ip);
     flag_t flags = m_flags;
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    const ModRM modrm = inst.mod_rm;
+    auto imm8 = static_cast<uint8_t>(inst.imm);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         auto& dst = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
-        auto imm8 = p[2];
         switch (modrm.reg)
         {
         case 0:
@@ -940,40 +950,36 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
             op_r_r<Op7>(dst, imm8, flags);
             break;
         }
-        ip += 3;
     }
     else
     {
-        auto dst_address = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        auto imm8 = p[2+dst_address.second];
         switch (modrm.reg)
         {
         case 0:
-            op_m_r<Op0>(dst_address.first, imm8, flags);
+            op_m_r<Op0>(inst.address, imm8, flags);
             break;
         case 1:
-            op_m_r<Op1>(dst_address.first, imm8, flags);
+            op_m_r<Op1>(inst.address, imm8, flags);
             break;
         case 2:
-            op_m_r<Op2>(dst_address.first, imm8, flags);
+            op_m_r<Op2>(inst.address, imm8, flags);
             break;
         case 3:
-            op_m_r<Op3>(dst_address.first, imm8, flags);
+            op_m_r<Op3>(inst.address, imm8, flags);
             break;
         case 4:
-            op_m_r<Op4>(dst_address.first, imm8, flags);
+            op_m_r<Op4>(inst.address, imm8, flags);
             break;
         case 5:
-            op_m_r<Op5>(dst_address.first, imm8, flags);
+            op_m_r<Op5>(inst.address, imm8, flags);
             break;
         case 6:
-            op_m_r<Op6>(dst_address.first, imm8, flags);
+            op_m_r<Op6>(inst.address, imm8, flags);
             break;
         case 7:
-            op_m_r<Op7>(dst_address.first, imm8, flags);
+            op_m_r<Op7>(inst.address, imm8, flags);
             break;
         }
-        ip += 3 + dst_address.second;
     }
     m_flags = flags;
     return ip;
@@ -982,9 +988,8 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
 template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
 ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
+    ip = decode_instruction<true, 4>(inst, ip);
     flag_t flags = m_flags;
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
 
     throw std::runtime_error("Not implemented");
 
@@ -995,9 +1000,8 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
 template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
 ptr_t CPU::op_rm32_imm8_sx(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
+    ip = decode_instruction<true, 1>(inst, ip);
     flag_t flags = m_flags;
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
 
     throw std::runtime_error("Not implemented");
 
@@ -1008,13 +1012,13 @@ ptr_t CPU::op_rm32_imm8_sx(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
     flag_t flags = 0;
     if constexpr (Op::AFFECTED_FLAGS)
     {
         flags = m_flags;
     }
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
@@ -1029,24 +1033,21 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
         {
             op_r_r<Op>(reg32(modrm.rm), reg32(modrm.reg), flags);
         }
-        ip += 2;
     }
     else
     {
-        auto dst = decode_address(modrm.mod, modrm.rm, inst, p + 1);
         if (inst.operand_size_override)
         {
-            op_m_r<Op>(dst.first, reg16(modrm.reg), flags);
+            op_m_r<Op>(inst.address, reg16(modrm.reg), flags);
         }
         else if (inst.rex_w)
         {
-            op_m_r<Op>(dst.first, reg64(modrm.reg, inst.rex_r), flags);
+            op_m_r<Op>(inst.address, reg64(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            op_m_r<Op>(dst.first, reg32(modrm.reg), flags);
+            op_m_r<Op>(inst.address, reg32(modrm.reg), flags);
         }
-        ip += 2 + dst.second;
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -1058,26 +1059,23 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
     flag_t flags = 0;
     if constexpr (Op::AFFECTED_FLAGS)
     {
         flags = m_flags;
     }
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
     uint8_t& dst = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         uint8_t reg = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
         op_r_r<Op>(dst, reg, flags);
-        ip += 2;
     }
     else
     {
-        auto src = decode_address(modrm.mod, modrm.rm, inst, p + 1);
-        uint8_t val = load<uint8_t>(src.first);
+        uint8_t val = load<uint8_t>(inst.address);
         op_r_r<Op>(dst, val, flags);
-        ip += 2 + src.second;
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -1089,13 +1087,13 @@ ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
     flag_t flags = 0;
     if constexpr (Op::AFFECTED_FLAGS)
     {
         flags = m_flags;
     }
-    const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
@@ -1110,24 +1108,21 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
         {
             op_r_r<Op>(reg32(modrm.reg), reg32(modrm.rm), flags);
         }
-        ip += 2;
     }
     else
     {
-        auto src = decode_address(modrm.mod, modrm.rm, inst, p + 1);
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg16(modrm.reg), load<uint16_t>(src.first), flags);
+            op_r_r<Op>(reg16(modrm.reg), load<uint16_t>(inst.address), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), load<uint64_t>(src.first), flags);
+            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), load<uint64_t>(inst.address), flags);
         }
         else
         {
-            op_r_r<Op>(reg32(modrm.reg), load<uint32_t>(src.first), flags);
+            op_r_r<Op>(reg32(modrm.reg), load<uint32_t>(inst.address), flags);
         }
-        ip += 2 + src.second;
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {

@@ -31,10 +31,6 @@ namespace cpu::X86_64
     private:
         const std::uint8_t* translate_instruction_address(ptr_t address);
         const std::uint8_t* get_instruction_address(ptr_t address) const;
-        template<typename T>
-        const T& fetch_imm(ptr_t address) const;
-
-        std::pair<uint64_t, size_t> decode_address(ModBits mod, uint8_t rm, const Instruction& inst, const uint8_t* p);
 
         uint8_t& reg8(uint8_t reg, bool with_rex, bool extension);
         uint16_t& reg16(uint8_t reg);
@@ -60,7 +56,7 @@ namespace cpu::X86_64
         };
         template<uint8_t code>
         ptr_t decode_prefix(Instruction&, ptr_t ip);
-        template<bool modrm, int imm_size>
+        template<bool modrm, int imm_size = 0>
         ptr_t decode_instruction(Instruction&, ptr_t ip);
 
         template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);

@@ -34,8 +34,7 @@ namespace cpu::X86_64
             uint8_t rex : 8;
         };
         ModRM mod_rm;
-        SIB sib;
-        int32_t displacement;
+        ptr_t address;
         int32_t imm;
         bool escape : 1; // code has 0x0F prefix
         bool lock : 1;
