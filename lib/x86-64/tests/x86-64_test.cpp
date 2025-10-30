@@ -667,6 +667,7 @@ BOOST_AUTO_TEST_CASE(syscall_tests)
     BOOST_REQUIRE_NO_THROW(cpu.execute_next());
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 123);
     BOOST_CHECK_EQUAL(kernel.ret_code, 1);
+    BOOST_CHECK_EQUAL(cpu.getIP(), 12);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

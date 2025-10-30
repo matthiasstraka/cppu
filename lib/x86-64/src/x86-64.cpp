@@ -711,6 +711,7 @@ ptr_t CPU::execute_one(ptr_t ip)
             code = op[1];
             executor = &s_opcodes2[code];
             instruction.escape = true;
+            ++ip;
         }
         else
         {
@@ -1208,8 +1209,8 @@ ptr_t CPU::op_complement_flag(Instruction&, ptr_t ip)
 
 ptr_t CPU::execute_SYSCALL(Instruction&, ptr_t ip)
 {
-    dispatch_syscall(ip + 2);
-    return ip + 2;
+    dispatch_syscall(ip + 1);
+    return ip + 1;
 }
 
 void CPU::dispatch_syscall(ptr_t next_ip)
