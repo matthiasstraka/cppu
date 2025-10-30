@@ -30,9 +30,8 @@ namespace cpu::X86_64
                 bool rex_r : 1;
                 bool rex_w : 1;
             };
-            uint8_t rex : 4;
+            uint8_t rex : 8;
         };
-        bool rex_present : 1;
         bool lock : 1;
         bool rep_ne : 1;
         bool rep : 1;

@@ -104,21 +104,21 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
 // 40-4F
     { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x41>, true },
+    { &CPU::decode_prefix<0x42>, true },
+    { &CPU::decode_prefix<0x43>, true },
+    { &CPU::decode_prefix<0x44>, true },
+    { &CPU::decode_prefix<0x45>, true },
+    { &CPU::decode_prefix<0x46>, true },
+    { &CPU::decode_prefix<0x47>, true },
+    { &CPU::decode_prefix<0x48>, true },
+    { &CPU::decode_prefix<0x49>, true },
+    { &CPU::decode_prefix<0x4A>, true },
+    { &CPU::decode_prefix<0x4B>, true },
+    { &CPU::decode_prefix<0x4C>, true },
+    { &CPU::decode_prefix<0x4D>, true },
+    { &CPU::decode_prefix<0x4E>, true },
+    { &CPU::decode_prefix<0x4F>, true },
 // 50-5F
     0,
     0,
@@ -412,14 +412,9 @@ ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
     {
         instruction.rep = true;
     }
-    else if constexpr (code == IP_REX)
+    else if constexpr ((code & IP_REX) == IP_REX)
     {
-        //instruction.rex_b = (rex & REX_B) == REX_B;
-        //instruction.rex_x = (rex & REX_X) == REX_X;
-        //instruction.rex_r = (rex & REX_R) == REX_R;
-        //instruction.rex_w = (rex & REX_W) == REX_W;
-        instruction.rex = *get_instruction_address(ip);
-        instruction.rex_present = true;
+        instruction.rex = code;
     }
     else
     {
@@ -571,10 +566,10 @@ ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
         flags = m_flags;
     }
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
-    const uint8_t reg = reg8(modrm.reg, inst.rex_present, inst.rex_r);
+    const uint8_t reg = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        op_r_r<Op>(reg8(modrm.rm, inst.rex_present, inst.rex_b), reg, flags);
+        op_r_r<Op>(reg8(modrm.rm, inst.rex != 0, inst.rex_b), reg, flags);
         ip += 2;
     }
     else
@@ -598,7 +593,7 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        auto& dst = reg8(modrm.rm, inst.rex_present, inst.rex_b);
+        auto& dst = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
         auto imm8 = p[2];
         switch (modrm.reg)
         {
@@ -752,10 +747,10 @@ ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
         flags = m_flags;
     }
     const ModRM modrm = reinterpret_cast<const ModRM&>(p[1]);
-    uint8_t& dst = reg8(modrm.reg, inst.rex_present, inst.rex_r);
+    uint8_t& dst = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        uint8_t reg = reg8(modrm.rm, inst.rex_present, inst.rex_b);
+        uint8_t reg = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
         op_r_r<Op>(dst, reg, flags);
         ip += 2;
     }
@@ -826,7 +821,7 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
-    reg8(p[0] & 0x07, inst.rex_present, inst.rex_b) = p[1];
+    reg8(p[0] & 0x07, inst.rex != 0, inst.rex_b) = p[1];
     return ip + 2;
 }
 
