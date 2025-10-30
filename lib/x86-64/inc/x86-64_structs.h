@@ -21,7 +21,7 @@ namespace cpu::X86_64
 
     struct Instruction
     {
-        uint16_t opcode;
+        uint8_t opcode;
         union
         {
             struct
@@ -35,6 +35,9 @@ namespace cpu::X86_64
         };
         ModRM mod_rm;
         SIB sib;
+        int32_t displacement;
+        int32_t imm;
+        bool escape : 1; // code has 0x0F prefix
         bool lock : 1;
         bool rep_ne : 1;
         bool rep : 1;

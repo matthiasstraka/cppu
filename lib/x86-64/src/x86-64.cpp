@@ -259,9 +259,9 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    &CPU::execute_JMP, // E9
+    &CPU::execute_JMP32,  // E9 JMP rel32
     0,
-    &CPU::execute_JMP, // EB
+    &CPU::execute_JMP8, // EB JMP rel8
     0,
     0,
     0,
@@ -754,18 +754,18 @@ ptr_t CPU::execute_one(ptr_t ip)
         {
             code = op[1];
             executor = &s_opcodes2[code];
-            instruction.opcode = (code << 8) | 0x0F;
+            instruction.escape = true;
         }
         else
         {
             executor = &s_opcodes[code];
-            instruction.opcode = code;
         }
-
+        
         if (!executor->f)
         {
             throw std::runtime_error("unsupported instruction");
         }
+        instruction.opcode = code;
         auto next_ip = (this->*(executor->f))(instruction, ip);
         if (!executor->prefix)
         {
@@ -782,6 +782,36 @@ void CPU::execute_next()
     m_ip = execute_one(m_ip);
 }
 
+template<bool modrm, int imm_size>
+ptr_t CPU::decode_instruction(Instruction& instruction, ptr_t ip)
+{
+    ++ip;
+    auto p = get_instruction_address(ip);
+    if constexpr (imm_size == 0)
+    {
+        // do not read imm
+    }
+    else if constexpr (imm_size == 1)
+    {
+        instruction.imm = *reinterpret_cast<const int8_t*>(p);
+        ip += 1;
+    }
+    else
+    {
+        if (instruction.operand_size_override)
+        {
+            instruction.imm = *reinterpret_cast<const int16_t*>(p);
+            ip += 2;
+        }
+        else
+        {
+            instruction.imm = *reinterpret_cast<const int32_t*>(p);
+            ip += 4;
+        }
+    }
+    return ip;
+}
+
 template<typename Op>
 ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
 {
@@ -790,12 +820,13 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
     {
         flags = m_flags;
     }
-    op_r_r<Op>(reg8(REG_RAX, false, false), fetch_imm<uint8_t>(ip + 1), flags);
+    ip = decode_instruction<false, 1>(inst, ip);
+    op_r_r<Op>(reg8(REG_RAX, false, false), static_cast<uint8_t>(inst.imm), flags);
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
     }
-    return ip + 2;
+    return ip;
 }
 
 template<typename Op>
@@ -833,12 +864,12 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
 }
 
 template<typename Cond>
-ptr_t CPU::op_jmp_cond(Instruction&, ptr_t ip)
+ptr_t CPU::op_jmp_cond(Instruction& instruction, ptr_t ip)
 {
     if (Cond::test(m_flags))
     {
-        auto imm8 = reinterpret_cast<const std::int8_t*>(get_instruction_address(ip + 1));
-        return ip + *imm8 + 2;
+        ip = decode_instruction<false, 1>(instruction, ip);
+        return ip + instruction.imm;
     }
     return ip + 2;
 }
@@ -1107,9 +1138,9 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
-    reg8(p[0] & 0x07, inst.rex != 0, inst.rex_b) = p[1];
-    return ip + 2;
+    ip = decode_instruction<false, 1>(inst, ip);
+    reg8(inst.opcode & 0x07, inst.rex != 0, inst.rex_b) = static_cast<uint8_t>(inst.imm);
+    return ip;
 }
 
 ptr_t CPU::execute_MOV_B8(Instruction& inst, ptr_t ip)
@@ -1131,18 +1162,16 @@ ptr_t CPU::execute_MOV_B8(Instruction& inst, ptr_t ip)
     return ip + 5;
 }
 
-ptr_t CPU::execute_JMP(Instruction& instruction, ptr_t ip)
+ptr_t CPU::execute_JMP8(Instruction& instruction, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
-    switch(p[0])
-    {
-    case 0xe9: //JMP rel32
-        return ip + 5 + *reinterpret_cast<const std::int32_t*>(p + 1);
-    case 0xeb: //JMP rel8
-        return ip + 2 + *reinterpret_cast<const std::int8_t*>(p + 1);
-    default:
-        throw std::runtime_error("unsupported instruction");
-    }
+    ip = decode_instruction<false, 1>(instruction, ip);
+    return ip + instruction.imm;
+}
+
+ptr_t CPU::execute_JMP32(Instruction& instruction, ptr_t ip)
+{
+    ip = decode_instruction<false, 4>(instruction, ip);
+    return ip + instruction.imm;
 }
 
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
@@ -1154,12 +1183,11 @@ ptr_t CPU::execute_INT_N(Instruction&, ptr_t ip)
     return ip + 1;
 }
 
-ptr_t CPU::execute_INT_imm8(Instruction&, ptr_t ip)
+ptr_t CPU::execute_INT_imm8(Instruction& instruction, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
-    auto imm8 = p[1];
-    dispatch_int(imm8);
-    return ip + 2;
+    ip = decode_instruction<false, 1>(instruction, ip);
+    dispatch_int(static_cast<uint8_t>(instruction.imm));
+    return ip;
 }
 
 template<cpu::X86_64::flag_t flag>

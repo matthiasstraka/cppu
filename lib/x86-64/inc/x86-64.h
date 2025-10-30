@@ -60,6 +60,9 @@ namespace cpu::X86_64
         };
         template<uint8_t code>
         ptr_t decode_prefix(Instruction&, ptr_t ip);
+        template<bool modrm, int imm_size>
+        ptr_t decode_instruction(Instruction&, ptr_t ip);
+
         template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_eax_imm32(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm8_r8(Instruction&, ptr_t ip);
@@ -76,7 +79,8 @@ namespace cpu::X86_64
 
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
-        ptr_t execute_JMP(Instruction&, ptr_t ip);
+        ptr_t execute_JMP8(Instruction&, ptr_t ip);
+        ptr_t execute_JMP32(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
         template<uint8_t N>
         ptr_t execute_INT_N(Instruction&, ptr_t ip);
