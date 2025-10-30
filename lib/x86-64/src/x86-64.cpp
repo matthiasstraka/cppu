@@ -742,34 +742,30 @@ void CPU::execute_next()
 template<bool modrm, int imm_size>
 ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
 {
-    ++ip;
     auto p = get_instruction_address(ip);
+    size_t length = 1;
 
     if constexpr (modrm)
     {
-        auto mod_rm = *reinterpret_cast<const ModRM*>(p);
-        ++p;
-        ++ip;
+        auto mod_rm = *reinterpret_cast<const ModRM*>(p + length);
+        ++length;
         inst.mod_rm = mod_rm;
         if (mod_rm.mod != MOD_DIRECT_REGISTER)
         {
             int32_t displacement = 0;
             if (mod_rm.rm == 0x4)
             {
-                const auto sib = *reinterpret_cast<const SIB*>(p);
-                ++p;
-                ++ip;
+                const auto sib = *reinterpret_cast<const SIB*>(p + length);
+                ++length;
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
-                    displacement = *reinterpret_cast<const int8_t*>(p);
-                    ++p;
-                    ++ip;
+                    displacement = *reinterpret_cast<const int8_t*>(p + length);
+                    ++length;
                     break;
                 case MOD_INDIRECT_32BIT:
-                    displacement = *reinterpret_cast<const int32_t*>(p);
-                    p+=4;
-                    ip+=4;
+                    displacement = *reinterpret_cast<const int32_t*>(p + length);
+                    length+=4;
                     break;
                 }
                 inst.address =
@@ -788,14 +784,12 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
-                    displacement = *reinterpret_cast<const int8_t*>(p);
-                    ++p;
-                    ++ip;
+                    displacement = *reinterpret_cast<const int8_t*>(p + length);
+                    ++length;
                     break;
                 case MOD_INDIRECT_32BIT:
-                    displacement = *reinterpret_cast<const int32_t*>(p);
-                    p+=4;
-                    ip+=4;
+                    displacement = *reinterpret_cast<const int32_t*>(p + length);
+                    length += 4;
                     break;
                 }
                 inst.address = reg64(mod_rm.rm, inst.rex_b) + displacement;
@@ -809,23 +803,23 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
     }
     else if constexpr (imm_size == 1)
     {
-        inst.imm = *reinterpret_cast<const int8_t*>(p);
-        ip += 1;
+        inst.imm = *reinterpret_cast<const int8_t*>(p + length);
+        ++length;
     }
     else
     {
         if (inst.operand_size_override)
         {
-            inst.imm = *reinterpret_cast<const int16_t*>(p);
-            ip += 2;
+            inst.imm = *reinterpret_cast<const int16_t*>(p + length);
+            length += 2;
         }
         else
         {
-            inst.imm = *reinterpret_cast<const int32_t*>(p);
-            ip += 4;
+            inst.imm = *reinterpret_cast<const int32_t*>(p + length);
+            length += 4;
         }
     }
-    return ip;
+    return ip + length;
 }
 
 template<typename Op>
