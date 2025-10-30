@@ -81,11 +81,11 @@ namespace cpu::X86_64
         template<uint8_t N>
         ptr_t execute_INT_N(Instruction&, ptr_t ip);
         ptr_t execute_INT_imm8(Instruction&, ptr_t ip);
+        ptr_t execute_SYSCALL(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_clear_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);
         template<typename Cond> ptr_t op_jmp_cond(Instruction&, ptr_t ip);
-        ptr_t execute_0F(Instruction&, ptr_t ip);
 
         template<typename Op, typename T>
         static void op_r_r(T& first, T second, cpu::X86_64::flag_t& flags);
@@ -107,5 +107,6 @@ namespace cpu::X86_64
         std::uintptr_t m_ip_address_offset = 0;
 
         static std::array<OpCode, 256> s_opcodes;
+        static std::array<OpCode, 256> s_opcodes2;
     };
 }

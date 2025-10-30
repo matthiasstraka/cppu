@@ -14,23 +14,14 @@ using cpu::X86_64::ptr_t;
  */
 enum InstructionPrefix
 {
+    IP_HINT_BRANCH_NOT_TAKEN = 0x2E,
+    IP_HINT_BRANCH_TAKEN = 0x3E,
     IP_REX = 0x40,
     IP_OPERAND_SIZE_OVERRIDE = 0x66,
     IP_ADDRESS_SIZE_OVERRIDE = 0x67,
     IP_LOCK = 0xF0,
     IP_REP_NE = 0xF2,
     IP_REP = 0xF3,
-};
-
-/**
- * see https://wiki.osdev.org/X86-64_Instruction_Encoding#REX_prefix
- */
-enum Rex
-{
-    REX_B = 0x01,
-    REX_X = 0x02,
-    REX_R = 0x04,
-    REX_W = 0x08,
 };
 
 std::array<CPU::OpCode, 256> CPU::s_opcodes = {
@@ -50,7 +41,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_al_imm8<OpOr>,  // 0x0C OR AL, imm8
     &CPU::op_eax_imm32<OpOr>,// 0x0D OR EAX, imm32
     0,
-    &CPU::execute_0F,
+    0, // 2-byte opcode escape code
 // 10-1F
     &CPU::op_rm8_r8<OpAdc>,   // 0x10 ADC r/m8, r8
     &CPU::op_rm32_r32<OpAdc>, // 0x11 ADC r/m8, r8
@@ -82,8 +73,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_r8_rm8<OpSub>,   // 0x2A SUB r8, r/m8
     &CPU::op_r32_rm32<OpSub>, // 0x2B SUB r32, r/m32
     &CPU::op_al_imm8<OpSub>,   // 0x2C SUB AL, imm8
-    &CPU::op_eax_imm32<OpSub>, // 0x1D SUB EAX, imm32
-    0,
+    &CPU::op_eax_imm32<OpSub>, // 0x2D SUB EAX, imm32
+    { &CPU::decode_prefix<0x2E>, true }, // 0x2E Branch hint
     0,
 // 30-3F
     &CPU::op_rm8_r8<OpXor>,   // 0x30 XOR r/m8, r8
@@ -100,25 +91,25 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_r32_rm32<OpCmp>, // 0x3B CMP r32, r/m32
     &CPU::op_al_imm8<OpCmp>,  // 0x3C CMP AL, imm8
     &CPU::op_eax_imm32<OpCmp>,// 0x3D CMP EAX, imm32
-    0,
+    { &CPU::decode_prefix<0x3E>, true }, // 0x3E Branch hint
     0,
 // 40-4F
     { &CPU::decode_prefix<0x40>, true },
-    { &CPU::decode_prefix<0x41>, true },
-    { &CPU::decode_prefix<0x42>, true },
-    { &CPU::decode_prefix<0x43>, true },
-    { &CPU::decode_prefix<0x44>, true },
-    { &CPU::decode_prefix<0x45>, true },
-    { &CPU::decode_prefix<0x46>, true },
-    { &CPU::decode_prefix<0x47>, true },
-    { &CPU::decode_prefix<0x48>, true },
-    { &CPU::decode_prefix<0x49>, true },
-    { &CPU::decode_prefix<0x4A>, true },
-    { &CPU::decode_prefix<0x4B>, true },
-    { &CPU::decode_prefix<0x4C>, true },
-    { &CPU::decode_prefix<0x4D>, true },
-    { &CPU::decode_prefix<0x4E>, true },
-    { &CPU::decode_prefix<0x4F>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
+    { &CPU::decode_prefix<0x40>, true },
 // 50-5F
     0,
     0,
@@ -294,6 +285,281 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
 };
 
+std::array<CPU::OpCode, 256> CPU::s_opcodes2 = {
+// 00-0F
+    0,
+    0,
+    0,
+    0,
+    0,
+    &CPU::execute_SYSCALL, // 0F 05 SYSCALL
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 10-1F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 20-2F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 30-3F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 40-4F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 50-5F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 60-6F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 70-7F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 80-8F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// 90-9F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// A0-AF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// B0-BF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// C0-CF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// D0-DF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// E0-EF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+// F0-FF
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
 CPU::CPU(kernel::IfKernel64* kernel)
 : m_kernel(kernel)
 {
@@ -392,7 +658,15 @@ void CPU::op_m_r(ptr_t first_addr, T second, cpu::X86_64::flag_t& flags)
 template<uint8_t code>
 ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
 {
-    if constexpr (code == IP_ADDRESS_SIZE_OVERRIDE)
+    if constexpr (code == IP_HINT_BRANCH_NOT_TAKEN)
+    {
+        // ignore hint
+    }
+    else if constexpr (code == IP_HINT_BRANCH_NOT_TAKEN)
+    {
+        // ignore hint
+    }
+    else if constexpr (code == IP_ADDRESS_SIZE_OVERRIDE)
     {
         instruction.address_size_override = true;
     }
@@ -412,9 +686,9 @@ ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
     {
         instruction.rep = true;
     }
-    else if constexpr ((code & IP_REX) == IP_REX)
+    else if constexpr (code == IP_REX)
     {
-        instruction.rex = code;
+        instruction.rex = instruction.opcode;
     }
     else
     {
@@ -464,29 +738,42 @@ std::pair<uint64_t, size_t> CPU::decode_address(ModBits mod, uint8_t rm, const I
 
 ptr_t CPU::execute_one(ptr_t ip)
 {
-    Instruction instruction = {0};
     const std::uint8_t* op = translate_instruction_address(ip);
     if (!op)
     {
         throw std::runtime_error("illegal instruction address");
     }
+
+    // decode the instruction
+    Instruction instruction = {0};
     while (true)
     {
-        const auto& executor = s_opcodes[*op];
-        if (!executor)
+        uint8_t code = op[0];
+        OpCode* executor;
+        if (code == 0x0F) //escape code
         {
-            throw std::runtime_error("unsupported instruction");
-        }
-        auto next_ip = (this->*(executor.f))(instruction, ip);
-        if (!executor.prefix)
-        {
-            return next_ip;
+            code = op[1];
+            executor = &s_opcodes2[code];
+            instruction.opcode = (code << 8) | 0x0F;
         }
         else
         {
-            op += (next_ip - ip);
-            ip = next_ip;
+            executor = &s_opcodes[code];
+            instruction.opcode = code;
         }
+
+        if (!executor->f)
+        {
+            throw std::runtime_error("unsupported instruction");
+        }
+        auto next_ip = (this->*(executor->f))(instruction, ip);
+        if (!executor->prefix)
+        {
+            return next_ip;
+        }
+
+        op += (next_ip - ip);
+        ip = next_ip;
     }
 }
 
@@ -896,17 +1183,10 @@ ptr_t CPU::op_complement_flag(Instruction&, ptr_t ip)
     return ip + 1;
 }
 
-ptr_t CPU::execute_0F(Instruction&, ptr_t ip)
+ptr_t CPU::execute_SYSCALL(Instruction&, ptr_t ip)
 {
-    auto p = get_instruction_address(ip);
-    auto op_code = p[1];
-    switch (op_code)
-    {
-    case 0x05: // SYSCALL
-        dispatch_syscall(ip + 2);
-        return ip + 2;
-    }
-    throw std::runtime_error("Not implemented");
+    dispatch_syscall(ip + 2);
+    return ip + 2;
 }
 
 void CPU::dispatch_syscall(ptr_t next_ip)
