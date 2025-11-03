@@ -75,6 +75,7 @@ namespace cpu::X86_64
 
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
+        ptr_t execute_NOP(Instruction&, ptr_t ip); // NOP
         ptr_t execute_JMP8(Instruction&, ptr_t ip);
         ptr_t execute_JMP32(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);

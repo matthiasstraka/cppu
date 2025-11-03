@@ -25,6 +25,19 @@ namespace cpu::X86_64
         static constexpr bool STORE_RESULT = true;
     };
 
+    struct OpNop : Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = 0;
+        static constexpr bool LOAD_FIRST = false;
+        static constexpr bool STORE_RESULT = false;
+        template<typename T>
+        static inline T call(T dst, T imm, flag_t& flags)
+        {
+            // NOP
+            return 0;
+        }
+    };
+
     struct OpAdd : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;

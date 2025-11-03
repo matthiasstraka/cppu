@@ -179,7 +179,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
 // 90-9F
-    0,
+    &CPU::execute_NOP, // 0x90 NOP
     0,
     0,
     0,
@@ -1150,6 +1150,11 @@ ptr_t CPU::execute_MOV_B8(Instruction& inst, ptr_t ip)
 
     reg32(reg) = *reinterpret_cast<const std::uint32_t*>(p + 1);
     return ip + 5;
+}
+
+ptr_t CPU::execute_NOP(Instruction&, ptr_t ip)
+{
+    return ip + 1;
 }
 
 ptr_t CPU::execute_JMP8(Instruction& instruction, ptr_t ip)

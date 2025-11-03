@@ -660,6 +660,18 @@ BOOST_AUTO_TEST_CASE(push_pop_reg_tests)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 16);
 }
 
+BOOST_AUTO_TEST_CASE(nop_tests)
+{
+    const std::uint8_t inst[] = {
+        0x90, // NOP
+        0x66, 0x90, // NOP
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    BOOST_REQUIRE_EQUAL(cpu.execute_one(0), 1);
+    BOOST_REQUIRE_EQUAL(cpu.execute_one(1), 3);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {
