@@ -592,6 +592,34 @@ BOOST_AUTO_TEST_CASE(cmp_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
 }
 
+BOOST_AUTO_TEST_CASE(push_imm_tests)
+{
+    std::uint8_t inst[] = {
+        0x6a, 0x01, // push 0x01
+        0x68, 1, 2, 3, 4, // pushd 0x04030201
+        0x66, 0x68, 0x22, 0x11, // pushw 0x1122
+        0, 0, 0, 0, 0, // stack space
+    };
+    BOOST_REQUIRE_EQUAL(sizeof(inst), 16);
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RSP, 16);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // push 0x01
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 15);
+    BOOST_CHECK_EQUAL(inst[15], 0x01);
+
+    cpu.setRegister(REG_RSP, 16);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // pushd 0x01020304
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint32_t*>(inst+12), 0x04030201);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 12);
+
+    cpu.setRegister(REG_RSP, 16);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // pushw 0x1122
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint16_t*>(inst+14), 0x1122);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 14);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {

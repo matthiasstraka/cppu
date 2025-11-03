@@ -136,9 +136,9 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     { &CPU::decode_prefix<0x66>, true },
     { &CPU::decode_prefix<0x67>, true },
+    &CPU::execute_PUSH_imm32, // 0x68 PUSH imm32
     0,
-    0,
-    0,
+    &CPU::execute_PUSH_imm8,  // 0x6A PUSH imm8
     0,
     0,
     0,
@@ -1165,6 +1165,34 @@ ptr_t CPU::execute_JMP32(Instruction& instruction, ptr_t ip)
 }
 
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
+
+ptr_t CPU::execute_PUSH_imm8(Instruction& inst, ptr_t ip)
+{
+    ip = decode_instruction<false, 1>(inst, ip);
+    auto rsp = getRegister(REG_RSP) - sizeof(uint8_t);
+    store(rsp, static_cast<uint8_t>(inst.imm));
+    setRegister(REG_RSP, rsp);
+    return ip;
+}
+
+ptr_t CPU::execute_PUSH_imm32(Instruction& inst, ptr_t ip)
+{
+    auto rsp = getRegister(REG_RSP);
+    if (inst.operand_size_override)
+    {
+        ip = decode_instruction<false, sizeof(int16_t)>(inst, ip);
+        rsp -= sizeof(int16_t);
+        store(rsp, static_cast<int16_t>(inst.imm));
+    }
+    else
+    {
+        ip = decode_instruction<false, sizeof(int32_t)>(inst, ip);
+        rsp -= sizeof(int32_t);
+        store(rsp, inst.imm);
+    }
+    setRegister(REG_RSP, rsp);
+    return ip;
+}
 
 template<uint8_t N>
 ptr_t CPU::execute_INT_N(Instruction&, ptr_t ip)
