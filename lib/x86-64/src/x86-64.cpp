@@ -119,14 +119,14 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::execute_PUSH_50, // 0x55 PUSH
     &CPU::execute_PUSH_50, // 0x56 PUSH
     &CPU::execute_PUSH_50, // 0x57 PUSH
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    &CPU::execute_POP_58, // 0x58 POP RAX
+    &CPU::execute_POP_58, // 0x59 POP
+    &CPU::execute_POP_58, // 0x5A POP
+    &CPU::execute_POP_58, // 0x5B POP
+    &CPU::execute_POP_58, // 0x5C POP
+    &CPU::execute_POP_58, // 0x5D POP
+    &CPU::execute_POP_58, // 0x5E POP
+    &CPU::execute_POP_58, // 0x5F POP
 // 60-6F
     0,
     0,
@@ -1206,6 +1206,23 @@ ptr_t CPU::execute_PUSH_50(Instruction& inst, ptr_t ip)
     {
         rsp -= sizeof(int64_t);
         store(rsp, reg64(inst.opcode & 0x07, inst.rex_b));
+    }
+    setRegister(REG_RSP, rsp);
+    return ip + 1;
+}
+
+ptr_t CPU::execute_POP_58(Instruction& inst, ptr_t ip)
+{
+    auto rsp = getRegister(REG_RSP);
+    if (inst.operand_size_override)
+    {
+        reg16(inst.opcode & 0x07) = load<uint16_t>(rsp);
+        rsp += sizeof(int16_t);
+    }
+    else
+    {
+        reg64(inst.opcode & 0x07, inst.rex_b) = load<uint64_t>(rsp);
+        rsp += sizeof(int64_t);
     }
     setRegister(REG_RSP, rsp);
     return ip + 1;
