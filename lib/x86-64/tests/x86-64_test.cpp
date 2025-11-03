@@ -620,6 +620,38 @@ BOOST_AUTO_TEST_CASE(push_imm_tests)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 14);
 }
 
+BOOST_AUTO_TEST_CASE(push_reg_tests)
+{
+    std::uint8_t inst[] = {
+        0x50, // push rax
+        0x66, 0x51, // push cx
+        0x41, 0x57, // push r15
+        0, 0, 0, // padding
+        0, 0, 0, 0, 0, 0, 0, 0, // stack space
+    };
+    BOOST_REQUIRE_EQUAL(sizeof(inst), 16);
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RSP, 16);
+    cpu.setRegister(REG_RAX, 0x0706050403020100ull);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // push rax
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 8);
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint64_t*>(inst+8), 0x0706050403020100ull);
+
+    cpu.setRegister(REG_RSP, 16);
+    cpu.setRegister(REG_RCX, 0xF00D);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // push cx
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint64_t*>(inst+8), 0xF00D050403020100ull);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 14);
+
+    cpu.setRegister(REG_RSP, 16);
+    cpu.setRegister(REG_R15, 0x0BADF00D);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // push r15
+    BOOST_CHECK_EQUAL(*reinterpret_cast<uint64_t*>(inst+8), 0x0BADF00D);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 8);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {

@@ -111,14 +111,14 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     { &CPU::decode_prefix<0x40>, true },
     { &CPU::decode_prefix<0x40>, true },
 // 50-5F
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    &CPU::execute_PUSH_50, // 0x50 PUSH RAX
+    &CPU::execute_PUSH_50, // 0x51 PUSH
+    &CPU::execute_PUSH_50, // 0x52 PUSH
+    &CPU::execute_PUSH_50, // 0x53 PUSH
+    &CPU::execute_PUSH_50, // 0x54 PUSH
+    &CPU::execute_PUSH_50, // 0x55 PUSH
+    &CPU::execute_PUSH_50, // 0x56 PUSH
+    &CPU::execute_PUSH_50, // 0x57 PUSH
     0,
     0,
     0,
@@ -1192,6 +1192,23 @@ ptr_t CPU::execute_PUSH_imm32(Instruction& inst, ptr_t ip)
     }
     setRegister(REG_RSP, rsp);
     return ip;
+}
+
+ptr_t CPU::execute_PUSH_50(Instruction& inst, ptr_t ip)
+{
+    auto rsp = getRegister(REG_RSP);
+    if (inst.operand_size_override)
+    {
+        rsp -= sizeof(int16_t);
+        store(rsp, reg16(inst.opcode & 0x07));
+    }
+    else
+    {
+        rsp -= sizeof(int64_t);
+        store(rsp, reg64(inst.opcode & 0x07, inst.rex_b));
+    }
+    setRegister(REG_RSP, rsp);
+    return ip + 1;
 }
 
 template<uint8_t N>
