@@ -733,6 +733,29 @@ BOOST_AUTO_TEST_CASE(call_ret_imm_test)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 2);
 }
 
+BOOST_AUTO_TEST_CASE(enter_leave_test)
+{
+    std::uint8_t inst[] = {
+        0xc8, 4, 0, 0, // ENTER 4, 0
+        0xc9, // LEAVE
+        0x66, 0x90, 0x90, // NOP
+        // 8: 8 byte stack
+        0, 0, 0, 0, 0, 0, 0, 0, // stack space
+    };
+    BOOST_REQUIRE_EQUAL(sizeof(inst), 16);
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RBP, -1);
+    cpu.setRegister(REG_RSP, 16);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // ENTER 4, 0
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 4);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBP), 8);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // LEAVE
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 16);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBP), -1);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {

@@ -43,6 +43,11 @@ namespace cpu::X86_64
         template<typename T>
         T load(ptr_t address) const;
 
+        template<typename T>
+        void stack_push(T value);
+        template<typename T>
+        T stack_pop();
+
         using Executor = ptr_t(CPU::*)(Instruction&, ptr_t ip);
         struct OpCode {
             OpCode(Executor executor, bool is_prefix = false)
@@ -74,11 +79,13 @@ namespace cpu::X86_64
         ptr_t op_rm32_imm8_sx(Instruction&, ptr_t ip);
 
         ptr_t execute_CALL(Instruction&, ptr_t ip); // CALL rel32
+        ptr_t execute_ENTER(Instruction&, ptr_t ip); // ENTER
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
         ptr_t execute_NOP(Instruction&, ptr_t ip); // NOP
         ptr_t execute_JMP8(Instruction&, ptr_t ip);
         ptr_t execute_JMP32(Instruction&, ptr_t ip);
+        ptr_t execute_LEAVE(Instruction&, ptr_t ip); // LEAVE
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_imm8(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_imm32(Instruction&, ptr_t ip);

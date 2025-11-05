@@ -224,8 +224,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::execute_ENTER, // 0xC8 ENTER
+    &CPU::execute_LEAVE, // 0xC9 LEAVE
     &CPU::execute_RET_imm16_far, // 0xCA RET imm16
     &CPU::execute_RET_far,  // 0xCB RET
     &CPU::execute_INT_N<3>, // 0xCC INT 3
@@ -623,6 +623,22 @@ T CPU::load(ptr_t address) const
     return *reinterpret_cast<const T*>(static_cast<const kernel::IfKernel64*>(m_kernel)->translate_address(address));
 }
 
+template<typename T>
+void CPU::stack_push(T value)
+{
+    auto& rsp = m_registers[REG_RSP];
+    rsp -= sizeof(T);
+    store(rsp, value);
+}
+
+template<typename T>
+T CPU::stack_pop()
+{
+    auto& rsp = m_registers[REG_RSP];
+    T value = load<T>(rsp);
+    rsp += sizeof(T);
+    return value;
+}
 
 template<typename Op, typename T>
 void CPU::op_r_r(T& first, T second, cpu::X86_64::flag_t& flags)
@@ -1136,17 +1152,13 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 ptr_t CPU::execute_CALL(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<false, 4>(inst, ip);
-    auto rsp = getRegister(REG_RSP) - sizeof(ptr_t);
-    store(rsp, ip);
-    setRegister(REG_RSP, rsp);
+    stack_push(ip);
     return ip + inst.imm;
 }
 
 ptr_t CPU::execute_RET_near(Instruction&, ptr_t)
 {
-    auto rsp = getRegister(REG_RSP);
-    setRegister(REG_RSP, rsp + sizeof(ptr_t));
-    return load<ptr_t>(rsp);
+    return stack_pop<ptr_t>();
 }
 
 ptr_t CPU::execute_RET_far(Instruction& inst, ptr_t ip)
@@ -1210,67 +1222,78 @@ ptr_t CPU::execute_JMP32(Instruction& instruction, ptr_t ip)
     return ip + instruction.imm;
 }
 
+ptr_t CPU::execute_ENTER(Instruction&, ptr_t ip)
+{
+    auto p = get_instruction_address(ip);
+    int16_t imm16 = *reinterpret_cast<const int16_t*>(p + 1);
+    int8_t level = p[3];
+    if (level != 0)
+    {
+        throw std::runtime_error("No nested function support yet");
+    }
+    auto& rsp = m_registers[REG_RSP];
+    auto& rbp = m_registers[REG_RBP];
+    stack_push(rbp);
+    rbp = rsp;
+    rsp -= imm16;
+    return ip + 4;
+}
+
+ptr_t CPU::execute_LEAVE(Instruction&, ptr_t ip)
+{
+    auto rsp = getRegister(REG_RBP);
+    setRegister(REG_RBP, load<ptr_t>(rsp));
+    setRegister(REG_RSP, rsp + sizeof(ptr_t));
+    return ip + 1;
+}
+
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
 
 ptr_t CPU::execute_PUSH_imm8(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<false, 1>(inst, ip);
-    auto rsp = getRegister(REG_RSP) - sizeof(uint8_t);
-    store(rsp, static_cast<uint8_t>(inst.imm));
-    setRegister(REG_RSP, rsp);
+    stack_push(static_cast<uint8_t>(inst.imm));
     return ip;
 }
 
 ptr_t CPU::execute_PUSH_imm32(Instruction& inst, ptr_t ip)
 {
-    auto rsp = getRegister(REG_RSP);
     if (inst.operand_size_override)
     {
         ip = decode_instruction<false, sizeof(int16_t)>(inst, ip);
-        rsp -= sizeof(int16_t);
-        store(rsp, static_cast<int16_t>(inst.imm));
+        stack_push(static_cast<int16_t>(inst.imm));
     }
     else
     {
         ip = decode_instruction<false, sizeof(int32_t)>(inst, ip);
-        rsp -= sizeof(int32_t);
-        store(rsp, inst.imm);
+        stack_push(inst.imm);
     }
-    setRegister(REG_RSP, rsp);
     return ip;
 }
 
 ptr_t CPU::execute_PUSH_50(Instruction& inst, ptr_t ip)
 {
-    auto rsp = getRegister(REG_RSP);
     if (inst.operand_size_override)
     {
-        rsp -= sizeof(int16_t);
-        store(rsp, reg16(inst.opcode & 0x07));
+        stack_push(reg16(inst.opcode & 0x07));
     }
     else
     {
-        rsp -= sizeof(int64_t);
-        store(rsp, reg64(inst.opcode & 0x07, inst.rex_b));
+        stack_push(reg64(inst.opcode & 0x07, inst.rex_b));
     }
-    setRegister(REG_RSP, rsp);
     return ip + 1;
 }
 
 ptr_t CPU::execute_POP_58(Instruction& inst, ptr_t ip)
 {
-    auto rsp = getRegister(REG_RSP);
     if (inst.operand_size_override)
     {
-        reg16(inst.opcode & 0x07) = load<uint16_t>(rsp);
-        rsp += sizeof(int16_t);
+        reg16(inst.opcode & 0x07) = stack_pop<uint16_t>();
     }
     else
     {
-        reg64(inst.opcode & 0x07, inst.rex_b) = load<uint64_t>(rsp);
-        rsp += sizeof(int64_t);
+        reg64(inst.opcode & 0x07, inst.rex_b) = stack_pop<uint64_t>();
     }
-    setRegister(REG_RSP, rsp);
     return ip + 1;
 }
 
