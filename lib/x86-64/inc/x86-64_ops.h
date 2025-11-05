@@ -96,6 +96,28 @@ namespace cpu::X86_64
         }
     };
 
+    struct OpNeg : Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
+        template<typename T>
+        static inline T call(T dst, flag_t& flags)
+        {
+            T result = -dst;
+            update_flags(flags, result, dst != 0);
+            return result;
+        }
+    };
+
+    struct OpNot : Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = 0;
+        template<typename T>
+        static inline T call(T dst, flag_t& flags)
+        {
+            return ~dst;
+        }
+    };
+
     struct OpOr : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
@@ -139,7 +161,7 @@ namespace cpu::X86_64
         template<typename T>
         static inline T call(T dst, T imm, flag_t& flags)
         {
-            update_flags(flags, dst & imm);
+            update_flags(flags, static_cast<T>(dst & imm));
             return 0;
         }
     };

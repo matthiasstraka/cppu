@@ -592,6 +592,60 @@ BOOST_AUTO_TEST_CASE(cmp_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
 }
 
+BOOST_AUTO_TEST_CASE(f6_tests)
+{
+    const std::uint8_t inst[] = {
+        0xf6, 0xd8, // neg al
+        0xf6, 0xd1, // not cl
+        0xf6, 0xc1, 0xff // test cl, 0xFF
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RAX, 0x01);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // neg al
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFF);
+
+    cpu.setRegister(REG_RCX, 0x00);    
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // not cl
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0xFF);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // test cl, 0xFF
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0xFF);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, FLAG_SF);
+}
+
+BOOST_AUTO_TEST_CASE(f7_tests)
+{
+    const std::uint8_t inst[] = {
+        0xf7, 0xd8, // neg eax
+        0xf7, 0xdb, // neg ebx
+        0xf7, 0xd1, // not ecx
+        0xf7, 0xc1, 0xff, 0, 0, 0, // test cl, 0xFF
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RAX, 0x01);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_CF, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // neg eax
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_CF, FLAG_CF);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFFFFFFFF);
+
+    cpu.setRegister(REG_RBX, 0x00);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // neg ebx
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_CF, 0);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 0);
+
+    cpu.setRegister(REG_RCX, 0x00);    
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // not ecx
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0xFFFFFFFF);
+
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // test ecx, 0xFF
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0xFFFFFFFF);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_SF, 0);
+    BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, 0);
+}
+
 BOOST_AUTO_TEST_CASE(push_imm_tests)
 {
     std::uint8_t inst[] = {

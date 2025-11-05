@@ -66,17 +66,24 @@ namespace cpu::X86_64
 
         template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_eax_imm32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm8(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm8_imm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm8_r8(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm32_imm32(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm32_r32(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_r8_rm8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_r32_rm32(Instruction&, ptr_t ip);
 
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t op_rm8_imm8(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm8_imm8(Instruction&, ptr_t ip);
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t op_rm32_imm32(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm32_imm32(Instruction&, ptr_t ip);
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t op_rm32_imm8_sx(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm32_imm8_sx(Instruction&, ptr_t ip);
+
+        ptr_t dispatch_F6(Instruction&, ptr_t ip);
+        ptr_t dispatch_F7(Instruction&, ptr_t ip);
 
         ptr_t execute_CALL(Instruction&, ptr_t ip); // CALL rel32
         ptr_t execute_ENTER(Instruction&, ptr_t ip); // ENTER
@@ -105,7 +112,13 @@ namespace cpu::X86_64
         template<typename Cond> ptr_t op_jmp_cond(Instruction&, ptr_t ip);
 
         template<typename Op, typename T>
+        static void op_r(T& first, cpu::X86_64::flag_t& flags);
+
+        template<typename Op, typename T>
         static void op_r_r(T& first, T second, cpu::X86_64::flag_t& flags);
+
+        template<typename Op, typename T>
+        void op_m(ptr_t first, cpu::X86_64::flag_t& flags);
 
         template<typename Op, typename T>
         void op_m_r(ptr_t first, T second, cpu::X86_64::flag_t& flags);
