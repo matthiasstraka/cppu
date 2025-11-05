@@ -672,6 +672,33 @@ BOOST_AUTO_TEST_CASE(nop_tests)
     BOOST_REQUIRE_EQUAL(cpu.execute_one(1), 3);
 }
 
+BOOST_AUTO_TEST_CASE(call_ret_test)
+{
+    std::uint8_t inst[] = {
+        0xe8, 3, 0, 0, 0, // CALL foo()
+        0xb3, 2, // MOV bl, 2
+        0x90,  // NOP
+        // 8:
+        // int foo()
+        0xb0, 1, // MOV al, 1
+        0xc3, // RET
+        0x90, // NOP
+        // 12:
+        0, 0, 0, 0, 0, 0, 0, 0, // stack space
+    };
+    BOOST_REQUIRE_EQUAL(sizeof(inst), 20);
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RSP, 20);
+    for (int n = 0; n < 4; ++n)
+    {
+        BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    }
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 1);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 2);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 20);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {

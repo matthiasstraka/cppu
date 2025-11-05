@@ -73,6 +73,7 @@ namespace cpu::X86_64
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
         ptr_t op_rm32_imm8_sx(Instruction&, ptr_t ip);
 
+        ptr_t execute_CALL(Instruction&, ptr_t ip); // CALL rel32
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
         ptr_t execute_NOP(Instruction&, ptr_t ip); // NOP
@@ -83,6 +84,7 @@ namespace cpu::X86_64
         ptr_t execute_PUSH_imm32(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_50(Instruction&, ptr_t ip);
         ptr_t execute_POP_58(Instruction&, ptr_t ip);
+        ptr_t execute_RET(Instruction&, ptr_t ip); // RET
         template<uint8_t N>
         ptr_t execute_INT_N(Instruction&, ptr_t ip);
         ptr_t execute_INT_imm8(Instruction&, ptr_t ip);

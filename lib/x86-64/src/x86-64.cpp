@@ -219,7 +219,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
+    &CPU::execute_RET,   // C3 RET
     0,
     0,
     0,
@@ -258,7 +258,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
+    &CPU::execute_CALL,   // E8 CALL rel32
     &CPU::execute_JMP32,  // E9 JMP rel32
     0,
     &CPU::execute_JMP8, // EB JMP rel8
@@ -1124,6 +1124,22 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
         m_flags = flags;
     }
     return ip;
+}
+
+ptr_t CPU::execute_CALL(Instruction& inst, ptr_t ip)
+{
+    ip = decode_instruction<false, 4>(inst, ip);
+    auto rsp = getRegister(REG_RSP) - sizeof(ptr_t);
+    store(rsp, ip);
+    setRegister(REG_RSP, rsp);
+    return ip + inst.imm;
+}
+
+ptr_t CPU::execute_RET(Instruction& inst, ptr_t ip)
+{
+    auto rsp = getRegister(REG_RSP);
+    setRegister(REG_RSP, rsp + sizeof(ptr_t));
+    return load<ptr_t>(rsp);
 }
 
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
