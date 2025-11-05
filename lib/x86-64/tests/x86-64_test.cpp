@@ -699,6 +699,40 @@ BOOST_AUTO_TEST_CASE(call_ret_test)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 20);
 }
 
+BOOST_AUTO_TEST_CASE(call_ret_imm_test)
+{
+    std::uint8_t inst[] = {
+        0x51, // PUSH rcx
+        0xe8, 2, 0, 0, 0, // CALL foo()
+        0xb3, 2, // MOV bl, 2
+        // 8:
+        // int foo()
+        0x8b, 0x44, 0x24, 0x08, // MOV eax, [rsp + 8]
+        0xc2, 8, 0, // RET 8
+        0x90, // NOP
+        // 16: 16 byte stack
+        0, 0, 0, 0, 0, 0, 0, 0, // stack space
+        0, 0, 0, 0, 0, 0, 0, 0, // stack space
+    };
+    BOOST_REQUIRE_EQUAL(sizeof(inst), 32);
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RCX, -1);
+    cpu.setRegister(REG_RSP, 32);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // PUSH rcx
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 24);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CALL foo()
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 16);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // MOV eax, [rsp + 8]
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // RET 8
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RSP), 32);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // MOV bl, 2
+
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFFFFFFFF);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 2);
+}
+
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
     const std::uint8_t inst[] = {

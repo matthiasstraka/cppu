@@ -84,7 +84,10 @@ namespace cpu::X86_64
         ptr_t execute_PUSH_imm32(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_50(Instruction&, ptr_t ip);
         ptr_t execute_POP_58(Instruction&, ptr_t ip);
-        ptr_t execute_RET(Instruction&, ptr_t ip); // RET
+        ptr_t execute_RET_near(Instruction&, ptr_t ip); // RET
+        ptr_t execute_RET_far(Instruction&, ptr_t ip); // RET
+        ptr_t execute_RET_imm16_near(Instruction&, ptr_t ip); // RET
+        ptr_t execute_RET_imm16_far(Instruction&, ptr_t ip); // RET
         template<uint8_t N>
         ptr_t execute_INT_N(Instruction&, ptr_t ip);
         ptr_t execute_INT_imm8(Instruction&, ptr_t ip);

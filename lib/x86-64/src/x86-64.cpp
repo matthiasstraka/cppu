@@ -218,16 +218,16 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
 // C0-CF
     0,
     0,
-    0,
-    &CPU::execute_RET,   // C3 RET
-    0,
-    0,
+    &CPU::execute_RET_imm16_near, // 0xC2 RET imm16
+    &CPU::execute_RET_near,       // 0xC3 RET
     0,
     0,
     0,
     0,
     0,
     0,
+    &CPU::execute_RET_imm16_far, // 0xCA RET imm16
+    &CPU::execute_RET_far,  // 0xCB RET
     &CPU::execute_INT_N<3>, // 0xCC INT 3
     &CPU::execute_INT_imm8, // 0xCD INT imm8
     0,
@@ -752,7 +752,7 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
         inst.mod_rm = mod_rm;
         if (mod_rm.mod != MOD_DIRECT_REGISTER)
         {
-            int32_t displacement = 0;
+            int32_t address = 0;
             if (mod_rm.rm == 0x4)
             {
                 const auto sib = *reinterpret_cast<const SIB*>(p + length);
@@ -760,18 +760,20 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
-                    displacement = *reinterpret_cast<const int8_t*>(p + length);
+                    address = *reinterpret_cast<const int8_t*>(p + length);
                     ++length;
                     break;
                 case MOD_INDIRECT_32BIT:
-                    displacement = *reinterpret_cast<const int32_t*>(p + length);
+                    address = *reinterpret_cast<const int32_t*>(p + length);
                     length+=4;
                     break;
                 }
-                inst.address =
-                    (reg64(sib.index, inst.rex_x) << sib.scale) +
-                    (reg64(sib.base, inst.rex_b)) +
-                    displacement;
+                address += reg64(sib.base, inst.rex_b);
+                if (sib.index != 0x04)
+                {
+                    address += reg64(sib.index, inst.rex_x) << sib.scale;
+                }
+                inst.address = address;
             }
             else if (mod_rm.rm == 5 && mod_rm.mod == 0)
             {
@@ -784,15 +786,15 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
-                    displacement = *reinterpret_cast<const int8_t*>(p + length);
+                    address = *reinterpret_cast<const int8_t*>(p + length);
                     ++length;
                     break;
                 case MOD_INDIRECT_32BIT:
-                    displacement = *reinterpret_cast<const int32_t*>(p + length);
+                    address = *reinterpret_cast<const int32_t*>(p + length);
                     length += 4;
                     break;
                 }
-                inst.address = reg64(mod_rm.rm, inst.rex_b) + displacement;
+                inst.address = reg64(mod_rm.rm, inst.rex_b) + address;
             }
         }
     }
@@ -805,6 +807,11 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
     {
         inst.imm = *reinterpret_cast<const int8_t*>(p + length);
         ++length;
+    }
+    else if constexpr (imm_size == 2)
+    {
+        inst.imm = *reinterpret_cast<const int16_t*>(p + length);
+        length += 2;
     }
     else
     {
@@ -1135,11 +1142,29 @@ ptr_t CPU::execute_CALL(Instruction& inst, ptr_t ip)
     return ip + inst.imm;
 }
 
-ptr_t CPU::execute_RET(Instruction& inst, ptr_t ip)
+ptr_t CPU::execute_RET_near(Instruction&, ptr_t)
 {
     auto rsp = getRegister(REG_RSP);
     setRegister(REG_RSP, rsp + sizeof(ptr_t));
     return load<ptr_t>(rsp);
+}
+
+ptr_t CPU::execute_RET_far(Instruction& inst, ptr_t ip)
+{
+    throw std::runtime_error("Far return not implemented");
+}
+
+ptr_t CPU::execute_RET_imm16_near(Instruction& inst, ptr_t ip)
+{
+    decode_instruction<false, 2>(inst, ip);
+    auto rsp = getRegister(REG_RSP);
+    setRegister(REG_RSP, rsp + sizeof(ptr_t) + inst.imm);
+    return load<ptr_t>(rsp);
+}
+
+ptr_t CPU::execute_RET_imm16_far(Instruction&, ptr_t ip)
+{
+    throw std::runtime_error("Far return not implemented");
 }
 
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
