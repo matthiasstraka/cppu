@@ -592,6 +592,23 @@ BOOST_AUTO_TEST_CASE(cmp_test)
     BOOST_CHECK_EQUAL(cpu.getFlags() & FLAG_ZF, FLAG_ZF);
 }
 
+BOOST_AUTO_TEST_CASE(lea_test)
+{
+    const std::uint8_t inst[] = {
+        0x8d, 0x44, 0x43, 0x0a, // lea eax, [2*rax+rbx+10]
+        0x48, 0x8d, 0x0c, 0x92, // lea rcx, [rdx+rdx*4]
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RAX, 5);
+    cpu.setRegister(REG_RBX, 8);
+    cpu.setRegister(REG_RDX, 11);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // lea eax, [2*rax+rbx+10]
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 2*5+8+10);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // lea rcx, [rdx+rdx*4]
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 5*11);
+}
+
 BOOST_AUTO_TEST_CASE(f6_tests)
 {
     const std::uint8_t inst[] = {

@@ -92,7 +92,8 @@ namespace cpu::X86_64
         ptr_t execute_NOP(Instruction&, ptr_t ip); // NOP
         ptr_t execute_JMP8(Instruction&, ptr_t ip);
         ptr_t execute_JMP32(Instruction&, ptr_t ip);
-        ptr_t execute_LEAVE(Instruction&, ptr_t ip); // LEAVE
+        ptr_t execute_LEA(Instruction&, ptr_t ip);
+        ptr_t execute_LEAVE(Instruction&, ptr_t ip);
         ptr_t execute_HLT_F4(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_imm8(Instruction&, ptr_t ip);
         ptr_t execute_PUSH_imm32(Instruction&, ptr_t ip);

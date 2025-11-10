@@ -175,7 +175,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_r8_rm8<OpMov>,   // 0x8A MOV r8, r/m8
     &CPU::op_r32_rm32<OpMov>, // 0x8B MOV r32, r/m32
     0,
-    0,
+    &CPU::execute_LEA,        // 0x8D LEA reg, [m]
     0,
     0,
 // 90-9F
@@ -1460,6 +1460,24 @@ ptr_t CPU::execute_LEAVE(Instruction&, ptr_t ip)
     setRegister(REG_RBP, load<ptr_t>(rsp));
     setRegister(REG_RSP, rsp + sizeof(ptr_t));
     return ip + 1;
+}
+
+ptr_t CPU::execute_LEA(Instruction& inst, ptr_t ip)
+{
+    ip = decode_instruction<true>(inst, ip);
+    if (inst.operand_size_override)
+    {
+        reg16(inst.mod_rm.reg) = inst.address;
+    }
+    else if (inst.rex_w)
+    {
+        reg64(inst.mod_rm.reg, inst.rex_r) = inst.address;
+    }
+    else
+    {
+        reg32(inst.mod_rm.reg) = inst.address_size_override ? static_cast<uint32_t>(inst.address) : inst.address;
+    }
+    return ip;
 }
 
 ptr_t CPU::execute_HLT_F4(Instruction& i, ptr_t ip) { return ip; } // TODO: maybe throw a HLT exception, but required privilege level 0
