@@ -579,6 +579,11 @@ const std::uint8_t* CPU::get_instruction_address(ptr_t address) const
     return reinterpret_cast<const std::uint8_t*>(address + m_ip_address_offset);
 }
 
+uint8_t& CPU::regAL()
+{
+    return reinterpret_cast<uint8_t*>(&m_registers[REG_RAX])[0];
+}
+
 uint8_t& CPU::reg8(uint8_t reg, bool with_rex, bool extension)
 {
     assert(reg < 8);
@@ -758,7 +763,7 @@ ptr_t CPU::execute_one(ptr_t ip)
         {
             executor = &s_opcodes[code];
         }
-        
+
         if (!executor->f)
         {
             throw std::runtime_error("unsupported instruction");
@@ -879,7 +884,7 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
         flags = m_flags;
     }
     ip = decode_instruction<false, 1>(inst, ip);
-    op_r_r<Op>(reg8(REG_RAX, false, false), static_cast<uint8_t>(inst.imm), flags);
+    op_r_r<Op>(regAL(), static_cast<uint8_t>(inst.imm), flags);
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
@@ -905,7 +910,7 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
         if (inst.rex_w)
         {
             uint64_t imm64 = static_cast<int64_t>(inst.imm);
-            op_r_r<Op>(reg64(REG_RAX, inst.rex_b), imm64, flags);
+            op_r_r<Op>(reg64(REG_RAX, false), imm64, flags);
         }
         else
         {

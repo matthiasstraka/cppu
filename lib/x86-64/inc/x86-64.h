@@ -32,6 +32,7 @@ namespace cpu::X86_64
         const std::uint8_t* translate_instruction_address(ptr_t address);
         const std::uint8_t* get_instruction_address(ptr_t address) const;
 
+        uint8_t& regAL();
         uint8_t& reg8(uint8_t reg, bool with_rex, bool extension);
         uint16_t& reg16(uint8_t reg);
         uint32_t& reg32(uint8_t reg);
