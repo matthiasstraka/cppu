@@ -41,5 +41,5 @@
 *.dwo
 
 # build folders
-**/build
+**/build*
 **/.vscode
