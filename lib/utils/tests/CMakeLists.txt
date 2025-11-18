@@ -19,7 +19,7 @@ add_executable(${PROJECT_UNIT_TESTS_NAME}
 set_property(TARGET ${PROJECT_UNIT_TESTS_NAME} PROPERTY CXX_STANDARD 20)
 target_link_libraries(${PROJECT_UNIT_TESTS_NAME} PRIVATE
     Boost::unit_test_framework
-    cpu_utils
+    utils
 )
 
 add_test(NAME ${PROJECT_UNIT_TESTS_NAME} COMMAND ${PROJECT_UNIT_TESTS_NAME})

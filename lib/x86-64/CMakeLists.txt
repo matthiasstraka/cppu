@@ -16,8 +16,8 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-  libkernel
-  cpu_utils
+  kernel
+  utils
 )
 
 # Unit tests

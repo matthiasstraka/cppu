@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(cpu_utils)
+project(utils)
 
 add_library(${PROJECT_NAME} STATIC
   inc/carry_addsub.h
