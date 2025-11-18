@@ -10,7 +10,7 @@ find_package(Boost REQUIRED
 )
 
 include_directories(${Boost_INCLUDE_DIRS})
-add_definitions(-DTEST_FILES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/files/")
+add_definitions(-DTEST_FILES_PATH="${CMAKE_SOURCE_DIR}/examples/")
 
 add_executable(${PROJECT_UNIT_TESTS_NAME}
     elf_test.cpp
