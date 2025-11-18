@@ -1,5 +1,7 @@
 #include "elf_file.h"
 
+#include <algorithm>
+#include <cstring>
 #include <stdexcept>
 
 using elf::ElfFile64;
@@ -84,7 +86,7 @@ std::string_view ElfFile64::getString(size_t index) const
     return m_string_data.data() + index;
 }
 
-std::vector<std::byte> ElfFile64::getSectionData(size_t index) const
+void ElfFile64::readProgramSection(size_t index, void* dst, size_t buffer_size) const
 {
     if (index >= m_p_header.size())
     {
@@ -93,8 +95,14 @@ std::vector<std::byte> ElfFile64::getSectionData(size_t index) const
 
     const auto& hdr = m_p_header[index];
 
-    std::vector<std::byte> data(hdr.p_memsz);
     fseek(m_file, hdr.p_offset, SEEK_SET);
-    fread(data.data(), data.size(), 1, m_file);
-    return data;
+    size_t read_bytes = std::min(buffer_size, hdr.p_filesz);
+    if (read_bytes != fread(dst, 1, read_bytes, m_file))
+    {
+        throw std::runtime_error("Failed to read program section");
+    }
+    if (read_bytes < buffer_size)
+    {
+        std::memset(reinterpret_cast<std::byte*>(dst) + read_bytes, 0, buffer_size - read_bytes);
+    }
 }

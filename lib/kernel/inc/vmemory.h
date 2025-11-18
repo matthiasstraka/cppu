@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
+#include <new>
 
 #define PF_X 1
 #define PF_W 2
@@ -13,11 +13,22 @@ namespace kernel
     class VirtualMemorySection
     {
     public:
-        VirtualMemorySection(uintptr_t address, uint8_t flags, size_t size);
-        VirtualMemorySection(uintptr_t address, uint8_t flags, std::vector<std::byte>&& data);
+        /**
+         * Creates a section with uninitialzed data
+         */
+        VirtualMemorySection(size_t size, std::align_val_t alignment, uint8_t flags);
+        VirtualMemorySection(size_t size, std::align_val_t alignment, uint8_t flags, std::byte init);
+        ~VirtualMemorySection();
+        VirtualMemorySection(const VirtualMemorySection&) = delete;
+
+        uintptr_t size() const { return m_size; }
+        std::byte* data() { return m_data; }
+        const std::byte* data() const { return m_data; }
+
     private:
-        uintptr_t m_address;
+        size_t m_size;
+        std::byte* m_data;
+        std::align_val_t m_alignment;
         uint8_t m_flags;
-        std::vector<std::byte> m_data;
     };
 }
