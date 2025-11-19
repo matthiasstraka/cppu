@@ -23,6 +23,8 @@ int main(int argc, char* argv[])
         // TODO: properly execute
         cpu.execute_next();
         cpu.execute_next();
+        cpu.execute_next();
+        cpu.execute_next();
         return static_cast<int>(cpu.getRegister(cpu::X86_64::REG_RAX));
     }
     catch(const std::exception& e)

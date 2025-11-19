@@ -798,11 +798,11 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
         inst.mod_rm = mod_rm;
         if (mod_rm.mod != MOD_DIRECT_REGISTER)
         {
-            int32_t address = 0;
             if (mod_rm.rm == 0x4)
             {
                 const auto sib = *reinterpret_cast<const SIB*>(p + length);
                 ++length;
+                int32_t address;
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
@@ -812,6 +812,9 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                 case MOD_INDIRECT_32BIT:
                     address = *reinterpret_cast<const int32_t*>(p + length);
                     length+=4;
+                    break;
+                default:
+                    address = 0;
                     break;
                 }
                 address += reg64(sib.base, inst.rex_b);
@@ -823,12 +826,13 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
             }
             else if (mod_rm.rm == 5 && mod_rm.mod == 0)
             {
-                // disp32
-                // TODO: it is unclear if that values needs to be added to something, different assembler make different op-codes
-                throw std::runtime_error("implementation uncertain");
+                int32_t disp32 = *reinterpret_cast<const int32_t*>(p + length);
+                length += 4;
+                inst.address = ip + length + disp32;
             }
             else
             {
+                int32_t address;
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
@@ -838,6 +842,9 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                 case MOD_INDIRECT_32BIT:
                     address = *reinterpret_cast<const int32_t*>(p + length);
                     length += 4;
+                    break;
+                default:
+                    address = 0;
                     break;
                 }
                 inst.address = reg64(mod_rm.rm, inst.rex_b) + address;
