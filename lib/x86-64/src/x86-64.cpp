@@ -599,24 +599,6 @@ uint8_t& CPU::reg8(uint8_t reg, bool with_rex, bool extension)
     }
 }
 
-uint16_t& CPU::reg16(uint8_t reg)
-{
-    assert(reg < 8);
-    return reinterpret_cast<uint16_t&>(m_registers[reg]);
-}
-
-uint32_t& CPU::reg32(uint8_t reg)
-{
-    assert(reg < 8);
-    return reinterpret_cast<uint32_t&>(m_registers[reg]);
-}
-
-uint64_t& CPU::reg64(uint8_t reg, bool extension)
-{
-    assert(reg < 8);
-    return m_registers[reg | (extension << 3)];
-}
-
 template <typename T>
 T& CPU::reg(uint8_t reg, bool extension)
 {
@@ -810,7 +792,7 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
             {
                 const auto sib = *reinterpret_cast<const SIB*>(p + length);
                 ++length;
-                int32_t address;
+                ptr_t address;
                 switch (mod_rm.mod)
                 {
                 case MOD_INDIRECT_8BIT:
@@ -825,10 +807,10 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                     address = 0;
                     break;
                 }
-                address += reg64(sib.base, inst.rex_b);
+                address += reg<int64_t>(sib.base, inst.rex_b);
                 if (sib.index != 0x04)
                 {
-                    address += reg64(sib.index, inst.rex_x) << sib.scale;
+                    address += reg<int64_t>(sib.index, inst.rex_x) << sib.scale;
                 }
                 inst.address = address;
             }
@@ -855,7 +837,7 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
                     address = 0;
                     break;
                 }
-                inst.address = reg64(mod_rm.rm, inst.rex_b) + address;
+                inst.address = reg<uint64_t>(mod_rm.rm, inst.rex_b) + address;
             }
         }
     }
@@ -918,19 +900,16 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     ip = decode_instruction<false, 4>(inst, ip);
     if (inst.operand_size_override)
     {
-        op_r_r<Op>(reg16(REG_RAX), static_cast<uint16_t>(inst.imm), flags);
+        op_r_r<Op>(reg<uint16_t>(REG_RAX), static_cast<uint16_t>(inst.imm), flags);
+    }
+    else if (inst.rex_w)
+    {
+        uint64_t imm64 = static_cast<int64_t>(inst.imm);
+        op_r_r<Op>(reg<uint64_t>(REG_RAX), imm64, flags);
     }
     else
     {
-        if (inst.rex_w)
-        {
-            uint64_t imm64 = static_cast<int64_t>(inst.imm);
-            op_r_r<Op>(reg64(REG_RAX, false), imm64, flags);
-        }
-        else
-        {
-            op_r_r<Op>(reg32(REG_RAX), static_cast<uint32_t>(inst.imm), flags);
-        }
+        op_r_r<Op>(reg<uint32_t>(REG_RAX), static_cast<uint32_t>(inst.imm), flags);
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -1137,15 +1116,15 @@ ptr_t CPU::op_rm32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r<Op>(reg16(modrm.rm), flags);
+            op_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), flags);
         }
         else if (inst.rex_w)
         {
-            op_r<Op>(reg64(modrm.rm, inst.rex_b), flags);
+            op_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), flags);
         }
         else
         {
-            op_r<Op>(reg32(modrm.rm), flags);
+            op_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), flags);
         }
     }
     else
@@ -1187,19 +1166,19 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
         {
             auto imm = *reinterpret_cast<const uint16_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg16(modrm.rm), imm, flags);
+            op_r_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), imm, flags);
         }
         else if (inst.rex_w)
         {
             auto imm = *reinterpret_cast<const uint64_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg64(modrm.rm, inst.rex_b), imm, flags);
+            op_r_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), imm, flags);
         }
         else
         {
             auto imm = *reinterpret_cast<const uint32_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg32(modrm.rm), imm, flags);
+            op_r_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), imm, flags);
         }
     }
     else
@@ -1244,30 +1223,30 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg16(modrm.rm), reg16(modrm.reg), flags);
+            op_r_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), reg<uint16_t>(modrm.reg, inst.rex_r), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg64(modrm.rm, inst.rex_b), reg64(modrm.reg, inst.rex_r), flags);
+            op_r_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), reg<uint64_t>(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            op_r_r<Op>(reg32(modrm.rm), reg32(modrm.reg), flags);
+            op_r_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), reg<uint32_t>(modrm.reg, inst.rex_r), flags);
         }
     }
     else
     {
         if (inst.operand_size_override)
         {
-            op_m_r<Op>(inst.address, reg16(modrm.reg), flags);
+            op_m_r<Op>(inst.address, reg<uint16_t>(modrm.reg, inst.rex_r), flags);
         }
         else if (inst.rex_w)
         {
-            op_m_r<Op>(inst.address, reg64(modrm.reg, inst.rex_r), flags);
+            op_m_r<Op>(inst.address, reg<uint64_t>(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            op_m_r<Op>(inst.address, reg32(modrm.reg), flags);
+            op_m_r<Op>(inst.address, reg<uint32_t>(modrm.reg, inst.rex_r), flags);
         }
     }
     if constexpr (Op::AFFECTED_FLAGS)
@@ -1319,30 +1298,30 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg16(modrm.reg), reg16(modrm.rm), flags);
+            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), reg<uint16_t>(modrm.rm, inst.rex_b), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), reg64(modrm.rm, inst.rex_b), flags);
+            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), reg<uint64_t>(modrm.rm, inst.rex_b), flags);
         }
         else
         {
-            op_r_r<Op>(reg32(modrm.reg), reg32(modrm.rm), flags);
+            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), reg<uint32_t>(modrm.rm, inst.rex_b), flags);
         }
     }
     else
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg16(modrm.reg), load<uint16_t>(inst.address), flags);
+            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), load<uint16_t>(inst.address), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg64(modrm.reg, inst.rex_r), load<uint64_t>(inst.address), flags);
+            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), load<uint64_t>(inst.address), flags);
         }
         else
         {
-            op_r_r<Op>(reg32(modrm.reg), load<uint32_t>(inst.address), flags);
+            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), load<uint32_t>(inst.address), flags);
         }
     }
     if constexpr (Op::AFFECTED_FLAGS)
@@ -1395,15 +1374,15 @@ ptr_t CPU::execute_CWDE(Instruction& inst, ptr_t ip)
 {
     if (inst.operand_size_override)
     {
-        reg16(REG_RAX) = static_cast<int16_t>(static_cast<int8_t>(regAL()));
+        reg<int16_t>(REG_RAX) = static_cast<int8_t>(regAL());
     }
     else if (inst.rex_w)
     {
-        reg64(REG_RAX, false) = static_cast<int64_t>(static_cast<int32_t>(reg32(REG_RAX)));
+        reg<int64_t>(REG_RAX) = reg<int32_t>(REG_RAX);
     }
     else
     {
-        reg32(REG_RAX) = static_cast<int32_t>(static_cast<int16_t>(reg16(REG_RAX)));
+        reg<int32_t>(REG_RAX) = reg<int16_t>(REG_RAX);
     }
     return ip + 1;
 }
@@ -1412,15 +1391,15 @@ ptr_t CPU::execute_CDQ(Instruction& inst, ptr_t ip)
 {
     if (inst.operand_size_override)
     {
-        reg16(REG_RDX) = (reg16(REG_RAX) & 0x8000) ? -1 : 0;
+        reg<int16_t>(REG_RDX) = reg<int16_t>(REG_RAX) < 0 ? -1 : 0;
     }
     else if (inst.rex_w)
     {
-        reg64(REG_RDX, false) = (reg64(REG_RAX, false) & 0x8000000000000000) ? -1 : 0;
+        reg<int64_t>(REG_RDX) = reg<int64_t>(REG_RAX) < 0 ? -1 : 0;
     }
     else
     {
-        reg32(REG_RDX) = (reg32(REG_RAX) & 0x80000000) ? -1 : 0;
+        reg<int32_t>(REG_RDX) = reg<int32_t>(REG_RAX) < 0 ? -1 : 0;
     }
     return ip + 1;
 }
@@ -1458,20 +1437,22 @@ ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)
 ptr_t CPU::execute_MOV_B8(Instruction& inst, ptr_t ip)
 {
     auto p = get_instruction_address(ip);
-    auto reg = p[0] & 0x07;
+    auto dst = p[0] & 0x07;
     if (inst.operand_size_override)
     {
-        reg16(reg) = *reinterpret_cast<const std::uint16_t*>(p + 1);
+        reg<int16_t>(dst, inst.rex_b) = *reinterpret_cast<const std::int16_t*>(p + 1);
         return ip + 3;
     }
-    if (inst.rex_w)
+    else if (inst.rex_w)
     {
-        reg64(reg, inst.rex_b) = *reinterpret_cast<const std::uint64_t*>(p + 1);
+        reg<int64_t>(dst, inst.rex_b) = *reinterpret_cast<const std::int64_t*>(p + 1);
         return ip + 9;
     }
-
-    reg32(reg) = *reinterpret_cast<const std::uint32_t*>(p + 1);
-    return ip + 5;
+    else
+    {
+        reg<int32_t>(dst) = *reinterpret_cast<const std::int32_t*>(p + 1);
+        return ip + 5;
+    }
 }
 
 ptr_t CPU::execute_JMP8(Instruction& instruction, ptr_t ip)
@@ -1516,15 +1497,15 @@ ptr_t CPU::execute_LEA(Instruction& inst, ptr_t ip)
     ip = decode_instruction<true>(inst, ip);
     if (inst.operand_size_override)
     {
-        reg16(inst.mod_rm.reg) = inst.address;
+        reg<uint16_t>(inst.mod_rm.reg, inst.rex_r) = inst.address;
     }
     else if (inst.rex_w)
     {
-        reg64(inst.mod_rm.reg, inst.rex_r) = inst.address;
+        reg<uint64_t>(inst.mod_rm.reg, inst.rex_r) = inst.address;
     }
     else
     {
-        reg32(inst.mod_rm.reg) = inst.address_size_override ? static_cast<uint32_t>(inst.address) : inst.address;
+        reg<uint32_t>(inst.mod_rm.reg, inst.rex_r) = inst.address_size_override ? static_cast<uint32_t>(inst.address) : inst.address;
     }
     return ip;
 }
@@ -1557,11 +1538,11 @@ ptr_t CPU::execute_PUSH_50(Instruction& inst, ptr_t ip)
 {
     if (inst.operand_size_override)
     {
-        stack_push(reg16(inst.opcode & 0x07));
+        stack_push(reg<int16_t>(inst.opcode & 0x07, inst.rex_b));
     }
     else
     {
-        stack_push(reg64(inst.opcode & 0x07, inst.rex_b));
+        stack_push(reg<int64_t>(inst.opcode & 0x07, inst.rex_b));
     }
     return ip + 1;
 }
@@ -1570,11 +1551,11 @@ ptr_t CPU::execute_POP_58(Instruction& inst, ptr_t ip)
 {
     if (inst.operand_size_override)
     {
-        reg16(inst.opcode & 0x07) = stack_pop<uint16_t>();
+        reg<int16_t>(inst.opcode & 0x07, inst.rex_b) = stack_pop<int16_t>();
     }
     else
     {
-        reg64(inst.opcode & 0x07, inst.rex_b) = stack_pop<uint64_t>();
+        reg<int64_t>(inst.opcode & 0x07, inst.rex_b) = stack_pop<int64_t>();
     }
     return ip + 1;
 }
@@ -1632,7 +1613,7 @@ ptr_t CPU::execute_XCHG_90(Instruction& inst, ptr_t ip)
     }
     else if (inst.rex_w)
     {
-        std::swap(reg64(REG_RAX, false), reg64(inst.opcode & 0x7, inst.rex_b));
+        std::swap(reg<int64_t>(REG_RAX), reg<int64_t>(inst.opcode & 0x7, inst.rex_b));
     }
     else
     {

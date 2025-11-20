@@ -34,9 +34,6 @@ namespace cpu::X86_64
 
         uint8_t& regAL();
         uint8_t& reg8(uint8_t reg, bool with_rex, bool extension);
-        uint16_t& reg16(uint8_t reg);
-        uint32_t& reg32(uint8_t reg);
-        uint64_t& reg64(uint8_t reg, bool extension);
         template <typename T>
         T& reg(uint8_t reg, bool extension = false);
 
