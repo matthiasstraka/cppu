@@ -187,8 +187,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
-    0,
+    &CPU::execute_CWDE,  // 0x98 CWDE,
+    &CPU::execute_CDQ,   // 0x99 CDQ,
     0,
     0,
     0,
@@ -1381,6 +1381,40 @@ ptr_t CPU::execute_CALL(Instruction& inst, ptr_t ip)
     ip = decode_instruction<false, 4>(inst, ip);
     stack_push(ip);
     return ip + inst.imm;
+}
+
+ptr_t CPU::execute_CWDE(Instruction& inst, ptr_t ip)
+{
+    if (inst.operand_size_override)
+    {
+        reg16(REG_RAX) = static_cast<int16_t>(static_cast<int8_t>(regAL()));
+    }
+    else if (inst.rex_w)
+    {
+        reg64(REG_RAX, false) = static_cast<int64_t>(static_cast<int32_t>(reg32(REG_RAX)));
+    }
+    else
+    {
+        reg32(REG_RAX) = static_cast<int32_t>(static_cast<int16_t>(reg16(REG_RAX)));
+    }
+    return ip + 1;
+}
+
+ptr_t CPU::execute_CDQ(Instruction& inst, ptr_t ip)
+{
+    if (inst.operand_size_override)
+    {
+        reg16(REG_RDX) = (reg16(REG_RAX) & 0x8000) ? -1 : 0;
+    }
+    else if (inst.rex_w)
+    {
+        reg64(REG_RDX, false) = (reg64(REG_RAX, false) & 0x8000000000000000) ? -1 : 0;
+    }
+    else
+    {
+        reg32(REG_RDX) = (reg32(REG_RAX) & 0x80000000) ? -1 : 0;
+    }
+    return ip + 1;
 }
 
 ptr_t CPU::execute_RET_near(Instruction&, ptr_t)

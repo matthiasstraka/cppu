@@ -87,6 +87,8 @@ namespace cpu::X86_64
         ptr_t dispatch_F7(Instruction&, ptr_t ip);
 
         ptr_t execute_CALL(Instruction&, ptr_t ip); // CALL rel32
+        ptr_t execute_CWDE(Instruction&, ptr_t ip); // CBW/CWDE/CDQE
+        ptr_t execute_CDQ(Instruction&, ptr_t ip); // CWD/CDQ/CQO
         ptr_t execute_ENTER(Instruction&, ptr_t ip); // ENTER
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32

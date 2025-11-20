@@ -804,6 +804,46 @@ BOOST_AUTO_TEST_CASE(call_ret_imm_test)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RBX), 2);
 }
 
+BOOST_AUTO_TEST_CASE(cdq_test)
+{
+    const std::uint8_t inst[] = {
+        0x66, 0x98, // CBW
+        0x98, // CWD
+        0x48, 0x98, // CDQ
+        0x66, 0x99, // CWD
+        0x99, // CDQ
+        0x48, 0x99, // CQO
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RAX, 0xFF);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CBW
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFFFF);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CWD
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFFFFFFFF);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CDQ
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFFFFFFFFFFFFFFFF);
+
+    cpu.setRegister(REG_RAX, 0xFF00);
+    cpu.setRegister(REG_RDX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CWD
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFF00);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RDX), 0xFFFF);
+
+    cpu.setRegister(REG_RAX, 0xFF000000);
+    cpu.setRegister(REG_RDX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CDQ
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFF000000);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RDX), 0xFFFFFFFF);
+
+    cpu.setRegister(REG_RAX, 0xFF00000000000000);
+    cpu.setRegister(REG_RDX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // CQO
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xFF00000000000000);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RDX), 0xFFFFFFFFFFFFFFFF);
+}
+
 BOOST_AUTO_TEST_CASE(enter_leave_test)
 {
     std::uint8_t inst[] = {
