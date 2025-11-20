@@ -37,6 +37,8 @@ namespace cpu::X86_64
         uint16_t& reg16(uint8_t reg);
         uint32_t& reg32(uint8_t reg);
         uint64_t& reg64(uint8_t reg, bool extension);
+        template <typename T>
+        T& reg(uint8_t reg, bool extension = false);
 
         template<typename T>
         void store(ptr_t address, T);
@@ -92,7 +94,6 @@ namespace cpu::X86_64
         ptr_t execute_ENTER(Instruction&, ptr_t ip); // ENTER
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
-        ptr_t execute_NOP(Instruction&, ptr_t ip); // NOP
         ptr_t execute_JMP8(Instruction&, ptr_t ip);
         ptr_t execute_JMP32(Instruction&, ptr_t ip);
         ptr_t execute_LEA(Instruction&, ptr_t ip);
@@ -110,6 +111,7 @@ namespace cpu::X86_64
         ptr_t execute_INT_N(Instruction&, ptr_t ip);
         ptr_t execute_INT_imm8(Instruction&, ptr_t ip);
         ptr_t execute_SYSCALL(Instruction&, ptr_t ip);
+        ptr_t execute_XCHG_90(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_clear_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);

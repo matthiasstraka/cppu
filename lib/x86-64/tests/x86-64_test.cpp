@@ -945,4 +945,26 @@ BOOST_AUTO_TEST_CASE(syscall_tests)
     BOOST_CHECK_EQUAL(cpu.getIP(), 12);
 }
 
+BOOST_AUTO_TEST_CASE(xchg_tests)
+{
+    const std::uint8_t inst[] = {
+        0x91, // XCHG ecx, eax
+        0x41, 0x90, // XCHG r8d, eax
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+
+    cpu.setRegister(REG_RAX, 0xAA);
+    cpu.setRegister(REG_RCX, 0xCC);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // XCHG ecx, eax
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0xCC);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RCX), 0xAA);
+
+    cpu.setRegister(REG_RAX, 0xAA);
+    cpu.setRegister(REG_R8, 0x88);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // XCHG r9d, eax
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x88);
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_R8), 0xAA);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

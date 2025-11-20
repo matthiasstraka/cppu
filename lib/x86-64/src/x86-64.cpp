@@ -2,6 +2,7 @@
 #include "x86-64_ops.h"
 #include "x86-64_structs.h"
 
+#include <algorithm>
 #include <bit>
 #include <cassert>
 #include <stdexcept>
@@ -179,14 +180,14 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
 // 90-9F
-    &CPU::execute_NOP, // 0x90 NOP
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    &CPU::execute_XCHG_90, // NOP
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
+    &CPU::execute_XCHG_90, // XCHG
     &CPU::execute_CWDE,  // 0x98 CWDE,
     &CPU::execute_CDQ,   // 0x99 CDQ,
     0,
@@ -614,6 +615,13 @@ uint64_t& CPU::reg64(uint8_t reg, bool extension)
 {
     assert(reg < 8);
     return m_registers[reg | (extension << 3)];
+}
+
+template <typename T>
+T& CPU::reg(uint8_t reg, bool extension)
+{
+    assert(reg < 8);
+    return reinterpret_cast<T&>(m_registers[reg | (extension << 3)]);
 }
 
 template<typename T>
@@ -1466,11 +1474,6 @@ ptr_t CPU::execute_MOV_B8(Instruction& inst, ptr_t ip)
     return ip + 5;
 }
 
-ptr_t CPU::execute_NOP(Instruction&, ptr_t ip)
-{
-    return ip + 1;
-}
-
 ptr_t CPU::execute_JMP8(Instruction& instruction, ptr_t ip)
 {
     ip = decode_instruction<false, 1>(instruction, ip);
@@ -1614,6 +1617,27 @@ ptr_t CPU::op_complement_flag(Instruction&, ptr_t ip)
 ptr_t CPU::execute_SYSCALL(Instruction&, ptr_t ip)
 {
     dispatch_syscall(ip + 1);
+    return ip + 1;
+}
+
+ptr_t CPU::execute_XCHG_90(Instruction& inst, ptr_t ip)
+{
+    if ((inst.opcode & 0x7) == 0 && !inst.rex_b)
+    {
+        // NOP
+    }
+    else if (inst.operand_size_override)
+    {
+        std::swap(reg<uint16_t>(REG_RAX), reg<uint16_t>(inst.opcode & 0x7, inst.rex_b));
+    }
+    else if (inst.rex_w)
+    {
+        std::swap(reg64(REG_RAX, false), reg64(inst.opcode & 0x7, inst.rex_b));
+    }
+    else
+    {
+        std::swap(reg<uint32_t>(REG_RAX), reg<uint32_t>(inst.opcode & 0x7, inst.rex_b));
+    }
     return ip + 1;
 }
 

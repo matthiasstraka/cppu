@@ -26,10 +26,10 @@ namespace cpu::X86_64
         {
             struct
             {
-                bool rex_b : 1;
-                bool rex_x : 1;
-                bool rex_r : 1;
-                bool rex_w : 1;
+                bool rex_b : 1; // Extension of the ModR/M r/m field, SIB base field, or Opcode reg field
+                bool rex_x : 1; // Extension of the SIB index field
+                bool rex_r : 1; // Extension of the ModR/M reg field
+                bool rex_w : 1; // 64 Bit Operand Size
             };
             uint8_t rex : 8;
         };
