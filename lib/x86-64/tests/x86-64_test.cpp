@@ -270,6 +270,26 @@ BOOST_AUTO_TEST_CASE(mov_reg_mem_test)
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RDX), 0x618a);
 }
 
+BOOST_AUTO_TEST_CASE(mov_sreg_test)
+{
+    const std::uint8_t inst[] = {
+        0x8e, 0xC0, // mov es, eax
+        0x66, 0x8e, 0xC9, // mov cs, cx
+        0x49, 0x8c, 0xC8, // mov r8, cs
+    };
+    kernel::MemoryAdapter mem(inst, 0);
+    CPU cpu(&mem);
+    cpu.setRegister(REG_RAX, 0xAA);
+    cpu.setRegister(REG_RCX, 0xCCCC);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // mov es, eax
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // mov cs, cx
+    BOOST_CHECK_EQUAL(cpu.getSegment(SEG_ES), 0xAA);
+    BOOST_CHECK_EQUAL(cpu.getSegment(SEG_CS), 0xCCCC);
+
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // mov eax, cs
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_R8), 0xCCCC);
+}
+
 BOOST_AUTO_TEST_CASE(jmp_rel_test)
 {
     // jmp 0

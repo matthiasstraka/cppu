@@ -25,6 +25,9 @@ namespace cpu::X86_64
         register_t getRegister(Register reg) const { return m_registers[static_cast<size_t>(reg)]; }
         void setRegister(Register reg, register_t value) { m_registers[static_cast<size_t>(reg)] = value; }
 
+        segment_t getSegment(Segment seg) const { return m_segment_registers[static_cast<size_t>(seg)]; }
+        void setRegister(Segment seg, segment_t value) { m_segment_registers[static_cast<size_t>(seg)] = value; }
+
         void execute_next();
         ptr_t execute_one(ptr_t ip);
 
@@ -89,6 +92,8 @@ namespace cpu::X86_64
         ptr_t execute_CWDE(Instruction&, ptr_t ip); // CBW/CWDE/CDQE
         ptr_t execute_CDQ(Instruction&, ptr_t ip); // CWD/CDQ/CQO
         ptr_t execute_ENTER(Instruction&, ptr_t ip); // ENTER
+        ptr_t execute_MOV_8C(Instruction&, ptr_t ip); // MOV m/r32, sreg
+        ptr_t execute_MOV_8E(Instruction&, ptr_t ip); // MOV sreg, m/r32
         ptr_t execute_MOV_B0(Instruction&, ptr_t ip); // MOV r8, imm8
         ptr_t execute_MOV_B8(Instruction&, ptr_t ip); // MOV r32, imm32
         ptr_t execute_JMP8(Instruction&, ptr_t ip);
@@ -127,7 +132,7 @@ namespace cpu::X86_64
         void dispatch_int(uint8_t interrupt);
 
         std::array<register_t, 16> m_registers;
-        std::array<std::uint16_t, 6> m_segment_registers;
+        std::array<segment_t,   6> m_segment_registers;
         flag_t m_flags = 0x0020;
         ptr_t m_ip = 0;
         kernel::IfKernel64* m_kernel;

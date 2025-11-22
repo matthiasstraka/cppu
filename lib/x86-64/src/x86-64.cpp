@@ -18,6 +18,8 @@ enum InstructionPrefix
     IP_HINT_BRANCH_NOT_TAKEN = 0x2E,
     IP_HINT_BRANCH_TAKEN = 0x3E,
     IP_REX = 0x40,
+    IP_FS_OVERRIDE = 0x64,
+    IP_GS_OVERRIDE = 0x65,
     IP_OPERAND_SIZE_OVERRIDE = 0x66,
     IP_ADDRESS_SIZE_OVERRIDE = 0x67,
     IP_LOCK = 0xF0,
@@ -133,8 +135,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     0,
     0,
-    0,
-    0,
+    { &CPU::decode_prefix<0x64>, true },
+    { &CPU::decode_prefix<0x65>, true },
     { &CPU::decode_prefix<0x66>, true },
     { &CPU::decode_prefix<0x67>, true },
     &CPU::execute_PUSH_imm32, // 0x68 PUSH imm32
@@ -175,9 +177,9 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::op_rm32_r32<OpMov>, // 0x89 MOV r/m32, r32
     &CPU::op_r8_rm8<OpMov>,   // 0x8A MOV r8, r/m8
     &CPU::op_r32_rm32<OpMov>, // 0x8B MOV r32, r/m32
-    0,
+    &CPU::execute_MOV_8C,     // 0x8C MOV r/m32, Sreg
     &CPU::execute_LEA,        // 0x8D LEA reg, [m]
-    0,
+    &CPU::execute_MOV_8E,     // 0x8E MOV Sreg, r/m16
     0,
 // 90-9F
     &CPU::execute_XCHG_90, // NOP
@@ -671,6 +673,14 @@ ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
     if constexpr (code == IP_HINT_BRANCH_TAKEN || code == IP_HINT_BRANCH_NOT_TAKEN)
     {
         // ignore hint
+    }
+    else if constexpr (code == IP_FS_OVERRIDE)
+    {
+        instruction.fs_override = true;
+    }
+    else if constexpr (code == IP_GS_OVERRIDE)
+    {
+        instruction.gs_override = true;
     }
     else if constexpr (code == IP_ADDRESS_SIZE_OVERRIDE)
     {
@@ -1407,6 +1417,68 @@ ptr_t CPU::execute_RET_imm16_near(Instruction& inst, ptr_t ip)
 ptr_t CPU::execute_RET_imm16_far(Instruction&, ptr_t ip)
 {
     throw std::runtime_error("Far return not implemented");
+}
+
+ptr_t CPU::execute_MOV_8C(Instruction& inst, ptr_t ip)
+{
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
+    if (modrm.reg >= m_segment_registers.size())
+    {
+        throw std::runtime_error("Invalid segment number");
+    }
+    auto sreg = m_segment_registers[modrm.reg];
+    if (modrm.mod == MOD_DIRECT_REGISTER)
+    {
+        if (inst.operand_size_override)
+        {
+            reg<uint16_t>(modrm.rm, inst.rex_b) = sreg;
+        }
+        else if (inst.rex_w)
+        {
+            reg<uint64_t>(modrm.rm, inst.rex_b) = sreg;
+        }
+        else
+        {
+            reg<uint32_t>(modrm.rm, inst.rex_b) = sreg;
+        }
+    }
+    else
+    {
+        if (inst.operand_size_override)
+        {
+            store<uint16_t>(inst.address, sreg);
+        }
+        else if (inst.rex_w)
+        {
+            store<uint64_t>(inst.address, sreg);
+        }
+        else
+        {
+            store<uint32_t>(inst.address, sreg);
+        }
+    }
+    return ip;
+}
+
+ptr_t CPU::execute_MOV_8E(Instruction& inst, ptr_t ip)
+{
+    ip = decode_instruction<true>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
+    if (modrm.rm >= m_segment_registers.size())
+    {
+        throw std::runtime_error("Invalid segment number");
+    }
+    auto& sreg = m_segment_registers[modrm.rm];
+    if (modrm.mod == MOD_DIRECT_REGISTER)
+    {
+        sreg = reg<uint16_t>(modrm.reg, inst.rex_r);
+    }
+    else
+    {
+        sreg = load<uint16_t>(inst.address);
+    }
+    return ip;
 }
 
 ptr_t CPU::execute_MOV_B0(Instruction& inst, ptr_t ip)

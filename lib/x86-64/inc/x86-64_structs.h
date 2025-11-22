@@ -40,6 +40,8 @@ namespace cpu::X86_64
         bool lock : 1;
         bool rep_ne : 1;
         bool rep : 1;
+        bool fs_override : 1; // SEG=FS 0x64
+        bool gs_override : 1; // SEG=GS 0x65
         bool operand_size_override : 1; // IP_OPERAND_SIZE_OVERRIDE (0x66)
         bool address_size_override : 1; // IP_ADDRESS_SIZE_OVERRIDE (0x67)
     };

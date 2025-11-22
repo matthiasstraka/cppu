@@ -7,6 +7,7 @@ namespace cpu::X86_64
     using register_t = std::uint64_t;
     using flag_t = std::uint64_t;
     using ptr_t = std::uint64_t;
+    using segment_t = std::uint16_t;
 
     enum Register
     {
@@ -26,6 +27,16 @@ namespace cpu::X86_64
         REG_R13,
         REG_R14,
         REG_R15,
+    };
+
+    enum Segment
+    {
+        SEG_ES = 0,
+        SEG_CS = 1,
+        SEG_SS = 2,
+        SEG_DS = 3,
+        SEG_FS = 4,
+        SEG_GS = 5,
     };
 
     enum FlagShift
