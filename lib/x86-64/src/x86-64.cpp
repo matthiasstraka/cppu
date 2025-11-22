@@ -168,7 +168,7 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     0,
     &CPU::dispatch_rm32_imm8_sx<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x83 OP r/m8, imm8 (sign-extended)
     &CPU::op_rm8_r8<OpTest>,   // 0x84 TEST r/m8, r8
-    &CPU::op_rm32_r32<OpTest>, // 0x85 TEST r/m8, r8
+    &CPU::op_rm32_r32<OpTest>, // 0x85 TEST r/m32, r32
     0,
     0,
     &CPU::op_rm8_r8<OpMov>,   // 0x88 MOV r/m8, r8
@@ -646,7 +646,7 @@ void CPU::op_r(T& first, cpu::X86_64::flag_t& flags)
 }
 
 template<typename Op, typename T>
-void CPU::op_r_r(T& first, T second, cpu::X86_64::flag_t& flags)
+void CPU::op_r_r(T& first, T& second, cpu::X86_64::flag_t& flags)
 {
     auto result = Op::call(first, second, flags);
     if constexpr (Op::STORE_RESULT)
@@ -671,7 +671,7 @@ void CPU::op_m(ptr_t first_addr, cpu::X86_64::flag_t& flags)
 }
 
 template<typename Op, typename T>
-void CPU::op_m_r(ptr_t first_addr, T second, cpu::X86_64::flag_t& flags)
+void CPU::op_m_r(ptr_t first_addr, T& second, cpu::X86_64::flag_t& flags)
 {
     T first;
     if constexpr (Op::LOAD_FIRST)
@@ -688,11 +688,7 @@ void CPU::op_m_r(ptr_t first_addr, T second, cpu::X86_64::flag_t& flags)
 template<uint8_t code>
 ptr_t CPU::decode_prefix(Instruction& instruction, ptr_t ip)
 {
-    if constexpr (code == IP_HINT_BRANCH_NOT_TAKEN)
-    {
-        // ignore hint
-    }
-    else if constexpr (code == IP_HINT_BRANCH_NOT_TAKEN)
+    if constexpr (code == IP_HINT_BRANCH_TAKEN || code == IP_HINT_BRANCH_NOT_TAKEN)
     {
         // ignore hint
     }
@@ -881,7 +877,8 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
         flags = m_flags;
     }
     ip = decode_instruction<false, 1>(inst, ip);
-    op_r_r<Op>(regAL(), static_cast<uint8_t>(inst.imm), flags);
+    auto imm = static_cast<uint8_t>(inst.imm);
+    op_r_r<Op>(regAL(), imm, flags);
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
@@ -900,7 +897,8 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     ip = decode_instruction<false, 4>(inst, ip);
     if (inst.operand_size_override)
     {
-        op_r_r<Op>(reg<uint16_t>(REG_RAX), static_cast<uint16_t>(inst.imm), flags);
+        auto imm = static_cast<uint16_t>(inst.imm);
+        op_r_r<Op>(reg<uint16_t>(REG_RAX), imm, flags);
     }
     else if (inst.rex_w)
     {
@@ -909,7 +907,8 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     }
     else
     {
-        op_r_r<Op>(reg<uint32_t>(REG_RAX), static_cast<uint32_t>(inst.imm), flags);
+        auto imm = static_cast<uint32_t>(inst.imm);
+        op_r_r<Op>(reg<uint32_t>(REG_RAX), imm, flags);
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -991,10 +990,10 @@ ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
     }
     ip = decode_instruction<true>(inst, ip);
     const ModRM modrm = inst.mod_rm;
-    const uint8_t reg = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
+    uint8_t& reg = reg8(modrm.reg, inst.rex, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        op_r_r<Op>(reg8(modrm.rm, inst.rex != 0, inst.rex_b), reg, flags);
+        op_r_r<Op>(reg8(modrm.rm, inst.rex, inst.rex_b), reg, flags);
     }
     else
     {
@@ -1313,15 +1312,18 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), load<uint16_t>(inst.address), flags);
+            auto m = load<uint16_t>(inst.address);
+            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), m, flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), load<uint64_t>(inst.address), flags);
+            auto m = load<uint64_t>(inst.address);
+            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), m, flags);
         }
         else
         {
-            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), load<uint32_t>(inst.address), flags);
+            auto m = load<uint32_t>(inst.address);
+            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), m, flags);
         }
     }
     if constexpr (Op::AFFECTED_FLAGS)

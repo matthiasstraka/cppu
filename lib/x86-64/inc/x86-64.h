@@ -118,13 +118,13 @@ namespace cpu::X86_64
         static void op_r(T& first, cpu::X86_64::flag_t& flags);
 
         template<typename Op, typename T>
-        static void op_r_r(T& first, T second, cpu::X86_64::flag_t& flags);
+        static void op_r_r(T& first, T& second, cpu::X86_64::flag_t& flags);
 
         template<typename Op, typename T>
         void op_m(ptr_t first, cpu::X86_64::flag_t& flags);
 
         template<typename Op, typename T>
-        void op_m_r(ptr_t first, T second, cpu::X86_64::flag_t& flags);
+        void op_m_r(ptr_t first, T& second, cpu::X86_64::flag_t& flags);
 
         /**
          * Forwards a syscall to the kernel instance
