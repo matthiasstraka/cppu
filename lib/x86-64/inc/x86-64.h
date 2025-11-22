@@ -115,12 +115,6 @@ namespace cpu::X86_64
         template<typename Cond> ptr_t op_jmp_cond(Instruction&, ptr_t ip);
 
         template<typename Op, typename T>
-        static void op_r(T& first, cpu::X86_64::flag_t& flags);
-
-        template<typename Op, typename T>
-        static void op_r_r(T& first, T& second, cpu::X86_64::flag_t& flags);
-
-        template<typename Op, typename T>
         void op_m(ptr_t first, cpu::X86_64::flag_t& flags);
 
         template<typename Op, typename T>

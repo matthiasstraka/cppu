@@ -22,19 +22,18 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
         static constexpr bool LOAD_FIRST = true;
-        static constexpr bool STORE_RESULT = true;
+        static constexpr bool STORE_FIRST = true;
     };
 
     struct OpNop : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
         static constexpr bool LOAD_FIRST = false;
-        static constexpr bool STORE_RESULT = false;
+        static constexpr bool STORE_FIRST = false;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T dst, T imm, flag_t& flags)
         {
             // NOP
-            return 0;
         }
     };
 
@@ -42,11 +41,10 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             bool cf = cpu_utils::add_with_carry(false, dst, imm);
             update_flags(flags, dst, cf);
-            return dst;
         }
     };
 
@@ -54,11 +52,10 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             bool cf = cpu_utils::add_with_carry((flags & FLAG_CF) == FLAG_CF, dst, imm);
             update_flags(flags, dst, cf);
-            return dst;
         }
     };
 
@@ -66,23 +63,21 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             dst &= imm;
             update_flags(flags, dst);
-            return dst;
         }
     };
 
     struct OpCmp : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = false;
+        static constexpr bool STORE_FIRST = false;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T dst, T imm, flag_t& flags)
         {
             update_flags(flags, dst - imm);
-            return 0;
         }
     };
 
@@ -90,9 +85,9 @@ namespace cpu::X86_64
     {
         static constexpr bool LOAD_FIRST = false;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
-            return imm;
+            dst = imm;
         }
     };
 
@@ -100,11 +95,11 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, flag_t& flags)
+        static inline void call(T& dst, flag_t& flags)
         {
-            T result = -dst;
-            update_flags(flags, result, dst != 0);
-            return result;
+            bool cf = dst != 0;
+            dst = -dst;
+            update_flags(flags, dst, cf);
         }
     };
 
@@ -112,9 +107,9 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
         template<typename T>
-        static inline T call(T dst, flag_t& flags)
+        static inline void call(T& dst, flag_t& flags)
         {
-            return ~dst;
+            dst = ~dst;
         }
     };
 
@@ -122,11 +117,10 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             dst |= imm;
             update_flags(flags, dst);
-            return dst;
         }
     };
 
@@ -134,11 +128,10 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             bool cf = cpu_utils::sub_with_borrow(false, dst, imm);
             update_flags(flags, dst, cf);
-            return dst;
         }
     };
 
@@ -146,23 +139,21 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             bool cf = cpu_utils::sub_with_borrow((flags & FLAG_CF) == FLAG_CF, dst, imm);
             update_flags(flags, dst, cf);
-            return dst;
         }
     };
 
     struct OpTest : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_RESULT = false;
+        static constexpr bool STORE_FIRST = false;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T dst, T imm, flag_t& flags)
         {
             update_flags(flags, static_cast<T>(dst & imm));
-            return 0;
         }
     };
 
@@ -170,11 +161,14 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
         template<typename T>
-        static inline T call(T dst, T& src, flag_t&)
+        static inline void call(T& dst, T& src, flag_t&)
         {
-            T tmp = src;
-            src = dst;
-            return tmp;
+            std::swap(dst, src);
+        }
+        template<typename T>
+        static inline void call(T& dst, T& src)
+        {
+            std::swap(dst, src);
         }
     };
 
@@ -182,11 +176,10 @@ namespace cpu::X86_64
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
         template<typename T>
-        static inline T call(T dst, T imm, flag_t& flags)
+        static inline void call(T& dst, T imm, flag_t& flags)
         {
             dst ^= imm;
             update_flags(flags, dst);
-            return dst;
         }
     };
 

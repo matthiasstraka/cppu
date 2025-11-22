@@ -636,26 +636,6 @@ T CPU::stack_pop()
 }
 
 template<typename Op, typename T>
-void CPU::op_r(T& first, cpu::X86_64::flag_t& flags)
-{
-    auto result = Op::call(first, flags);
-    if constexpr (Op::STORE_RESULT)
-    {
-        first = result;
-    }
-}
-
-template<typename Op, typename T>
-void CPU::op_r_r(T& first, T& second, cpu::X86_64::flag_t& flags)
-{
-    auto result = Op::call(first, second, flags);
-    if constexpr (Op::STORE_RESULT)
-    {
-        first = result;
-    }
-}
-
-template<typename Op, typename T>
 void CPU::op_m(ptr_t first_addr, cpu::X86_64::flag_t& flags)
 {
     T first;
@@ -663,8 +643,8 @@ void CPU::op_m(ptr_t first_addr, cpu::X86_64::flag_t& flags)
     {
         first = load<T>(first_addr);
     }
-    first = Op::call(first, flags);
-    if constexpr (Op::STORE_RESULT)
+    Op::call(first, flags);
+    if constexpr (Op::STORE_FIRST)
     {
         store(first_addr, first);
     }
@@ -678,8 +658,8 @@ void CPU::op_m_r(ptr_t first_addr, T& second, cpu::X86_64::flag_t& flags)
     {
         first = load<T>(first_addr);
     }
-    first = Op::call(first, second, flags);
-    if constexpr (Op::STORE_RESULT)
+    Op::call(first, second, flags);
+    if constexpr (Op::STORE_FIRST)
     {
         store(first_addr, first);
     }
@@ -878,7 +858,7 @@ ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
     }
     ip = decode_instruction<false, 1>(inst, ip);
     auto imm = static_cast<uint8_t>(inst.imm);
-    op_r_r<Op>(regAL(), imm, flags);
+    Op::call(regAL(), imm, flags);
     if constexpr (Op::AFFECTED_FLAGS)
     {
         m_flags = flags;
@@ -898,17 +878,17 @@ ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
     if (inst.operand_size_override)
     {
         auto imm = static_cast<uint16_t>(inst.imm);
-        op_r_r<Op>(reg<uint16_t>(REG_RAX), imm, flags);
+        Op::call(reg<uint16_t>(REG_RAX), imm, flags);
     }
     else if (inst.rex_w)
     {
         uint64_t imm64 = static_cast<int64_t>(inst.imm);
-        op_r_r<Op>(reg<uint64_t>(REG_RAX), imm64, flags);
+        Op::call(reg<uint64_t>(REG_RAX), imm64, flags);
     }
     else
     {
         auto imm = static_cast<uint32_t>(inst.imm);
-        op_r_r<Op>(reg<uint32_t>(REG_RAX), imm, flags);
+        Op::call(reg<uint32_t>(REG_RAX), imm, flags);
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -940,7 +920,7 @@ ptr_t CPU::op_rm8(Instruction& inst, ptr_t ip)
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        op_r<Op>(reg8(modrm.rm, inst.rex != 0, inst.rex_b), flags);
+        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), flags);
     }
     else
     {
@@ -967,7 +947,7 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        op_r_r<Op>(reg8(modrm.rm, inst.rex != 0, inst.rex_b), imm, flags);
+        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), imm, flags);
     }
     else
     {
@@ -993,7 +973,7 @@ ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
     uint8_t& reg = reg8(modrm.reg, inst.rex, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        op_r_r<Op>(reg8(modrm.rm, inst.rex, inst.rex_b), reg, flags);
+        Op::call(reg8(modrm.rm, inst.rex, inst.rex_b), reg, flags);
     }
     else
     {
@@ -1019,28 +999,28 @@ ptr_t CPU::dispatch_rm8_imm8(Instruction& inst, ptr_t ip)
         switch (modrm.reg)
         {
         case 0:
-            op_r_r<Op0>(dst, imm8, flags);
+            Op0::call(dst, imm8, flags);
             break;
         case 1:
-            op_r_r<Op1>(dst, imm8, flags);
+            Op1::call(dst, imm8, flags);
             break;
         case 2:
-            op_r_r<Op2>(dst, imm8, flags);
+            Op2::call(dst, imm8, flags);
             break;
         case 3:
-            op_r_r<Op3>(dst, imm8, flags);
+            Op3::call(dst, imm8, flags);
             break;
         case 4:
-            op_r_r<Op4>(dst, imm8, flags);
+            Op4::call(dst, imm8, flags);
             break;
         case 5:
-            op_r_r<Op5>(dst, imm8, flags);
+            Op5::call(dst, imm8, flags);
             break;
         case 6:
-            op_r_r<Op6>(dst, imm8, flags);
+            Op6::call(dst, imm8, flags);
             break;
         case 7:
-            op_r_r<Op7>(dst, imm8, flags);
+            Op7::call(dst, imm8, flags);
             break;
         }
     }
@@ -1115,15 +1095,15 @@ ptr_t CPU::op_rm32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), flags);
         }
         else if (inst.rex_w)
         {
-            op_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), flags);
         }
         else
         {
-            op_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), flags);
         }
     }
     else
@@ -1165,19 +1145,19 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
         {
             auto imm = *reinterpret_cast<const uint16_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), imm, flags);
         }
         else if (inst.rex_w)
         {
             auto imm = *reinterpret_cast<const uint64_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), imm, flags);
         }
         else
         {
             auto imm = *reinterpret_cast<const uint32_t*>(p);
             ip += sizeof(imm);
-            op_r_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), imm, flags);
         }
     }
     else
@@ -1222,15 +1202,15 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg<uint16_t>(modrm.rm, inst.rex_b), reg<uint16_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), reg<uint16_t>(modrm.reg, inst.rex_r), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg<uint64_t>(modrm.rm, inst.rex_b), reg<uint64_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), reg<uint64_t>(modrm.reg, inst.rex_r), flags);
         }
         else
         {
-            op_r_r<Op>(reg<uint32_t>(modrm.rm, inst.rex_b), reg<uint32_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), reg<uint32_t>(modrm.reg, inst.rex_r), flags);
         }
     }
     else
@@ -1269,12 +1249,12 @@ ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         uint8_t reg = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
-        op_r_r<Op>(dst, reg, flags);
+        Op::call(dst, reg, flags);
     }
     else
     {
         uint8_t val = load<uint8_t>(inst.address);
-        op_r_r<Op>(dst, val, flags);
+        Op::call(dst, val, flags);
     }
     if constexpr (Op::AFFECTED_FLAGS)
     {
@@ -1297,15 +1277,15 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
     {
         if (inst.operand_size_override)
         {
-            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), reg<uint16_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), reg<uint16_t>(modrm.rm, inst.rex_b), flags);
         }
         else if (inst.rex_w)
         {
-            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), reg<uint64_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), reg<uint64_t>(modrm.rm, inst.rex_b), flags);
         }
         else
         {
-            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), reg<uint32_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), reg<uint32_t>(modrm.rm, inst.rex_b), flags);
         }
     }
     else
@@ -1313,17 +1293,17 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
         if (inst.operand_size_override)
         {
             auto m = load<uint16_t>(inst.address);
-            op_r_r<Op>(reg<uint16_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), m, flags);
         }
         else if (inst.rex_w)
         {
             auto m = load<uint64_t>(inst.address);
-            op_r_r<Op>(reg<uint64_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), m, flags);
         }
         else
         {
             auto m = load<uint32_t>(inst.address);
-            op_r_r<Op>(reg<uint32_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), m, flags);
         }
     }
     if constexpr (Op::AFFECTED_FLAGS)
@@ -1611,15 +1591,15 @@ ptr_t CPU::execute_XCHG_90(Instruction& inst, ptr_t ip)
     }
     else if (inst.operand_size_override)
     {
-        std::swap(reg<uint16_t>(REG_RAX), reg<uint16_t>(inst.opcode & 0x7, inst.rex_b));
+        OpXchg::call(reg<int16_t>(REG_RAX), reg<int16_t>(inst.opcode & 0x7, inst.rex_b));
     }
     else if (inst.rex_w)
     {
-        std::swap(reg<int64_t>(REG_RAX), reg<int64_t>(inst.opcode & 0x7, inst.rex_b));
+        OpXchg::call(reg<int64_t>(REG_RAX), reg<int64_t>(inst.opcode & 0x7, inst.rex_b));
     }
     else
     {
-        std::swap(reg<uint32_t>(REG_RAX), reg<uint32_t>(inst.opcode & 0x7, inst.rex_b));
+        OpXchg::call(reg<int32_t>(REG_RAX), reg<int32_t>(inst.opcode & 0x7, inst.rex_b));
     }
     return ip + 1;
 }
