@@ -947,9 +947,11 @@ BOOST_AUTO_TEST_CASE(syscall_tests)
 
 BOOST_AUTO_TEST_CASE(xchg_tests)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x91, // XCHG ecx, eax
         0x41, 0x90, // XCHG r8d, eax
+        0x86, 0x21, // XCHG byte ptr [rcx], ah
+        0x66, 0x87, 0x01, // XCHG word ptr [rcx], ax
     };
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
@@ -965,6 +967,19 @@ BOOST_AUTO_TEST_CASE(xchg_tests)
     BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // XCHG r9d, eax
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x88);
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_R8), 0xAA);
+
+    cpu.setRegister(REG_RCX, 0);
+    cpu.setRegister(REG_RAX, 0xAABB);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // XCHG byte ptr [rcx], ah
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x91BB);
+    BOOST_CHECK_EQUAL(inst[0], 0xAA);
+
+    cpu.setRegister(REG_RCX, 0);
+    cpu.setRegister(REG_RAX, 0x2211);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // XCHG word ptr [rcx], ax
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0x41AA);
+    BOOST_CHECK_EQUAL(inst[0], 0x11);
+    BOOST_CHECK_EQUAL(inst[1], 0x22);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

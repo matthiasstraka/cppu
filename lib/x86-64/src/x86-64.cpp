@@ -169,8 +169,8 @@ std::array<CPU::OpCode, 256> CPU::s_opcodes = {
     &CPU::dispatch_rm32_imm8_sx<OpAdd, OpOr, OpAdc, OpSbb, OpAnd, OpSub, OpXor, OpCmp>,  // 0x83 OP r/m8, imm8 (sign-extended)
     &CPU::op_rm8_r8<OpTest>,   // 0x84 TEST r/m8, r8
     &CPU::op_rm32_r32<OpTest>, // 0x85 TEST r/m32, r32
-    0,
-    0,
+    &CPU::op_rm8_r8<OpXchg>,   // 0x86 XCHG r/m8, r8
+    &CPU::op_rm32_r32<OpXchg>, // 0x87 XCHG r/m32, r32
     &CPU::op_rm8_r8<OpMov>,   // 0x88 MOV r/m8, r8
     &CPU::op_rm32_r32<OpMov>, // 0x89 MOV r/m32, r32
     &CPU::op_r8_rm8<OpMov>,   // 0x8A MOV r8, r/m8

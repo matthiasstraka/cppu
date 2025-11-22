@@ -166,6 +166,18 @@ namespace cpu::X86_64
         }
     };
 
+    struct OpXchg : Op
+    {
+        static constexpr flag_t AFFECTED_FLAGS = 0;
+        template<typename T>
+        static inline T call(T dst, T& src, flag_t&)
+        {
+            T tmp = src;
+            src = dst;
+            return tmp;
+        }
+    };
+
     struct OpXor : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
