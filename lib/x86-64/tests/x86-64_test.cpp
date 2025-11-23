@@ -9,7 +9,7 @@ BOOST_AUTO_TEST_SUITE(Amd64_suite)
 
 BOOST_AUTO_TEST_CASE(default_test)
 {
-    const void* inst = nullptr;
+    void* inst = nullptr;
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), 0);
@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE(default_test)
 
 BOOST_AUTO_TEST_CASE(mov_reg_imm32_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xb8, 0x78, 0x56, 0x34, 0x12, // mov eax, 0x12345678
         0xbc, 0x78, 0x56, 0x34, 0x00, // mov esp, 0x00345678
     };
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(mov_reg_imm32_test)
 BOOST_AUTO_TEST_CASE(mov_reg_imm16_test)
 {
     // mov ax, 0x4321
-    const std::uint8_t inst[] = {0x66, 0xb8, 0x21, 0x43};
+    std::uint8_t inst[] = {0x66, 0xb8, 0x21, 0x43};
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
     // mov eax, 0x12345678
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(mov_reg_imm8_test)
 {
     // mov cl, 0x05
     // mov ch, 0x08
-    const std::uint8_t inst[] = {0xb1, 0x05, 0xb5, 0x08};
+    std::uint8_t inst[] = {0xb1, 0x05, 0xb5, 0x08};
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
 
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(mov_reg_imm8_test)
 
 BOOST_AUTO_TEST_CASE(mov_reg_imm8_with_rex_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x40, 0xb0, 0,
         0x40, 0xb1, 1,
         0x40, 0xb2, 2,
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(mov_reg_imm8_with_rex_test)
 
 BOOST_AUTO_TEST_CASE(mov_reg8_reg8_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x88, 0xc1, // mov cl, al
         0x88, 0xe7, // mov bh, ah
         0x88, 0xc4, // mov ah, al
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(mov_reg8_reg8_test)
 
 BOOST_AUTO_TEST_CASE(mov_reg32_reg32_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x89, 0xc3, // mov ebx, eax
         0x89, 0xdc, // mov esp, ebx
         0x66, 0x89, 0xc1, // mov cx, ax
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE(mov_reg_mem_test)
 
 BOOST_AUTO_TEST_CASE(mov_sreg_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x8e, 0xC0, // mov es, eax
         0x66, 0x8e, 0xC9, // mov cs, cx
         0x49, 0x8c, 0xC8, // mov r8, cs
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(jmp_rel_test)
 {
     // jmp 0
     // jmp -4
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xeb, 0x00,
         0xeb, static_cast<std::uint8_t>(-4),
         0xe9, 0x01, 0x02, 0, 0, // JMP 0x00000201
@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE(jmp_rel_test)
 
 BOOST_AUTO_TEST_CASE(add_sub_al_imm_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x04, 0x01, // add al, 1
         0x04, 0x07, // add al, 7
         0x04, static_cast<std::uint8_t>(-8), // add al, -8
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(add_sub_al_imm_test)
 
 BOOST_AUTO_TEST_CASE(add_rax_imm_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x04, 0xff, // add al, -1
         0x66, 0x05, 0xff, 0xff, // add ax, -1
         0x05, 0xff, 0xff, 0xff, 0xff, // add eax, -1
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(add_rax_imm_test)
 
 BOOST_AUTO_TEST_CASE(adc_al_imm_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x14, 0x01, // add al, 1
         0xf9, // stc
         0x14, 0x07, // add al, 7
@@ -408,7 +408,7 @@ BOOST_AUTO_TEST_CASE(adc_al_imm_test)
 
 BOOST_AUTO_TEST_CASE(add_eax_imm_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x05, 0xFF, 0xFF, 0xFF, 0xFF, // add eax, 0xFFFFFFFF
         0x05, 0x02, 0, 0, 0,  // add eax, 2
     };
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE(add_op_test)
 
 BOOST_AUTO_TEST_CASE(add_jnz_imm_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x04, 0xFF, // add al, 0xFF
         0x75, static_cast<std::uint8_t>(-4),  // JNZ -4
     };
@@ -510,7 +510,7 @@ BOOST_AUTO_TEST_CASE(op_rm8_imm8_test)
 
 BOOST_AUTO_TEST_CASE(logical_al_imm8_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x34, 0x00, // xor al, 0
         0x34, 0xFF, // xor al, 0xFF
         0x24, 0xF0, // and al, 0xF0
@@ -542,7 +542,7 @@ BOOST_AUTO_TEST_CASE(logical_al_imm8_test)
 
 BOOST_AUTO_TEST_CASE(test_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xa8, 0x00, // test al, 0
         0xa8, 0x0F, // test al, 0x0f
         0xa8, 0x80, // test al, 0x80
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE(test_test)
 
 BOOST_AUTO_TEST_CASE(xor_eax_imm32_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x35, 0, 0, 0, 0, // xor eax, 0
         0x66, 0x35, 0xFF, 0x0F, // xor ax, 0x0FFF
         0x35, 0, 0, 0, 0x80, // xor eax, 0x80000000
@@ -592,7 +592,7 @@ BOOST_AUTO_TEST_CASE(xor_eax_imm32_test)
 
 BOOST_AUTO_TEST_CASE(cmp_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x39, 0xC0, // cmp eax, eax
         0x39, 0xD8, // cmp eax, edx
         0x3D, 0xA0, 0, 0, 0, // cmp eax, 0xA0
@@ -614,7 +614,7 @@ BOOST_AUTO_TEST_CASE(cmp_test)
 
 BOOST_AUTO_TEST_CASE(lea_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x8d, 0x44, 0x43, 0x0a, // lea eax, [2*rax+rbx+10]
         0x48, 0x8d, 0x0c, 0x92, // lea rcx, [rdx+rdx*4]
     };
@@ -631,7 +631,7 @@ BOOST_AUTO_TEST_CASE(lea_test)
 
 BOOST_AUTO_TEST_CASE(f6_tests)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xf6, 0xd8, // neg al
         0xf6, 0xd1, // not cl
         0xf6, 0xc1, 0xff // test cl, 0xFF
@@ -653,7 +653,7 @@ BOOST_AUTO_TEST_CASE(f6_tests)
 
 BOOST_AUTO_TEST_CASE(f7_tests)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xf7, 0xd8, // neg eax
         0xf7, 0xdb, // neg ebx
         0xf7, 0xd1, // not ecx
@@ -753,7 +753,7 @@ BOOST_AUTO_TEST_CASE(push_pop_reg_tests)
 
 BOOST_AUTO_TEST_CASE(nop_tests)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x90, // NOP
         0x66, 0x90, // NOP
     };
@@ -826,7 +826,7 @@ BOOST_AUTO_TEST_CASE(call_ret_imm_test)
 
 BOOST_AUTO_TEST_CASE(cdq_test)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0x66, 0x98, // CBW
         0x98, // CWD
         0x48, 0x98, // CDQ
@@ -889,7 +889,7 @@ BOOST_AUTO_TEST_CASE(enter_leave_test)
 
 BOOST_AUTO_TEST_CASE(flag_modifiers_tests)
 {
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xf9, // STC
         0xf8, // CLC
         0xf5, // CMC
@@ -928,7 +928,7 @@ BOOST_AUTO_TEST_CASE(syscall_tests)
     class TestKernel : public kernel::MemoryAdapter
     {
     public:
-        TestKernel(const void* phy_address, std::uintptr_t virt_address)
+        TestKernel(void* phy_address, std::uintptr_t virt_address)
         : MemoryAdapter(phy_address, virt_address)
         {}
 
@@ -948,7 +948,7 @@ BOOST_AUTO_TEST_CASE(syscall_tests)
         uint64_t ret_code = 0;
     };
 
-    const std::uint8_t inst[] = {
+    std::uint8_t inst[] = {
         0xb8, 60, 0, 0, 0, // mov eax, 60
         0xbf, 1, 0, 0, 0, // mov edi, 1 (return code)
         0x0f, 0x05, // SYSCALL

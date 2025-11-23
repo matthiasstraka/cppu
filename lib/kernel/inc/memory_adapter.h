@@ -10,14 +10,6 @@ namespace kernel
         MemoryAdapter(void* phy_address, std::uintptr_t virt_address)
         : m_phyiscal_address(phy_address)
         , m_virt_address(virt_address)
-        , m_readonly(false)
-        {
-        }
-
-        MemoryAdapter(const void* phy_address, std::uintptr_t virt_address)
-        : m_phyiscal_address(const_cast<void*>(phy_address))
-        , m_virt_address(virt_address)
-        , m_readonly(true)
         {
         }
 
@@ -31,16 +23,7 @@ namespace kernel
             return 0;
         }
 
-        void* translate_address(std::uintptr_t addr) override
-        {
-            if (m_readonly)
-            {
-                return nullptr;
-            }
-            return reinterpret_cast<char*>(m_phyiscal_address) + (addr - m_virt_address);
-        }
-
-        const void* translate_address(std::uintptr_t addr) const override
+        void* translate_address(std::uintptr_t addr) final
         {
             return reinterpret_cast<char*>(m_phyiscal_address) + (addr - m_virt_address);
         }
@@ -48,6 +31,5 @@ namespace kernel
     private:
         void* m_phyiscal_address;
         std::uintptr_t m_virt_address;
-        bool m_readonly;
     };
 }

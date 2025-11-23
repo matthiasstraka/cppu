@@ -25,12 +25,8 @@ namespace kernel
         virtual uint64_t syscall(uint64_t number, const uint64_t* args, size_t num_args) = 0;
 
         /**
-         * Translate a virtual memory address for R/W memory
+         * Translate a virtual memory address
          */
         virtual void* translate_address(std::uintptr_t address) = 0;
-        /**
-         * Translate a virtual memory address for read-only memory
-         */
-        virtual const void* translate_address(std::uintptr_t address) const = 0;
     };
 }

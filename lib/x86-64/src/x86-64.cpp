@@ -572,7 +572,7 @@ CPU::CPU(kernel::IfKernel64* kernel)
 
 const std::uint8_t* CPU::translate_instruction_address(ptr_t address)
 {
-    auto p = reinterpret_cast<const std::uint8_t*>(static_cast<const kernel::IfKernel64*>(m_kernel)->translate_address(address));
+    auto p = reinterpret_cast<const std::uint8_t*>(m_kernel->translate_address(address));
     m_ip_address_offset = reinterpret_cast<uintptr_t>(p) - address;
     return p;
 }
@@ -617,7 +617,7 @@ void CPU::store(ptr_t address, T value)
 template<typename T>
 T CPU::load(ptr_t address) const
 {
-    return *reinterpret_cast<const T*>(static_cast<const kernel::IfKernel64*>(m_kernel)->translate_address(address));
+    return *reinterpret_cast<const T*>(m_kernel->translate_address(address));
 }
 
 template<typename T>

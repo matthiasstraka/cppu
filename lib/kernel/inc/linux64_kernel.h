@@ -18,7 +18,6 @@ namespace kernel::Linux
         uint64_t syscall(uint64_t number, const uint64_t* args, size_t num_args) override;
 
         void* translate_address(std::uintptr_t address) final;
-        const void* translate_address(std::uintptr_t address) const final;
 
         std::uintptr_t stack_address() const;
 

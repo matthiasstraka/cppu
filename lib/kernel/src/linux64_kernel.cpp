@@ -78,21 +78,3 @@ void* Linux64Kernel::translate_address(std::uintptr_t address)
 
     return it->second.data() + offset;
 }
-
-const void* Linux64Kernel::translate_address(std::uintptr_t address) const
-{
-    auto it = m_virtual_memory.upper_bound(address);
-    if (!m_virtual_memory.empty())
-    {
-        --it;
-    }
-
-    assert(address >= it->first);
-    auto offset = address - it->first;
-    if (offset >= it->second.size())
-    {
-        return nullptr;
-    }
-
-    return it->second.data() + offset;
-}
