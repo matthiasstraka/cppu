@@ -47,6 +47,9 @@ namespace cpu::X86_64
         T load(ptr_t address) const;
 
         template<typename T>
+        T& mem(ptr_t address) const;
+
+        template<typename T>
         void stack_push(T value);
         template<typename T>
         T stack_pop();
@@ -118,12 +121,6 @@ namespace cpu::X86_64
         template<flag_t flag> ptr_t op_set_flag(Instruction&, ptr_t ip);
         template<flag_t flag> ptr_t op_complement_flag(Instruction&, ptr_t ip);
         template<typename Cond> ptr_t op_jmp_cond(Instruction&, ptr_t ip);
-
-        template<typename Op, typename T>
-        void op_m(ptr_t first, cpu::X86_64::flag_t& flags);
-
-        template<typename Op, typename T>
-        void op_m_r(ptr_t first, T& second, cpu::X86_64::flag_t& flags);
 
         /**
          * Forwards a syscall to the kernel instance

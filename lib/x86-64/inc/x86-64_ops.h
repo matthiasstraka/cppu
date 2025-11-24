@@ -21,15 +21,11 @@ namespace cpu::X86_64
     struct Op
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
-        static constexpr bool LOAD_FIRST = true;
-        static constexpr bool STORE_FIRST = true;
     };
 
     struct OpNop : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = 0;
-        static constexpr bool LOAD_FIRST = false;
-        static constexpr bool STORE_FIRST = false;
         template<typename T>
         static inline void call(T dst, T imm, flag_t& flags)
         {
@@ -73,7 +69,6 @@ namespace cpu::X86_64
     struct OpCmp : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_FIRST = false;
         template<typename T>
         static inline void call(T dst, T imm, flag_t& flags)
         {
@@ -83,7 +78,6 @@ namespace cpu::X86_64
 
     struct OpMov : Op
     {
-        static constexpr bool LOAD_FIRST = false;
         template<typename T>
         static inline void call(T& dst, T imm, flag_t& flags)
         {
@@ -149,7 +143,6 @@ namespace cpu::X86_64
     struct OpTest : Op
     {
         static constexpr flag_t AFFECTED_FLAGS = FLAG_ZF | FLAG_SF | FLAG_CF;
-        static constexpr bool STORE_FIRST = false;
         template<typename T>
         static inline void call(T dst, T imm, flag_t& flags)
         {
