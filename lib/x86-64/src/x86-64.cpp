@@ -837,48 +837,30 @@ ptr_t CPU::decode_instruction(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_al_imm8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<false, 1>(inst, ip);
     auto imm = static_cast<uint8_t>(inst.imm);
-    Op::call(regAL(), imm, flags);
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
-    }
+    Op::call(regAL(), imm, m_flags);
     return ip;
 }
 
 template<typename Op>
 ptr_t CPU::op_eax_imm32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<false, 4>(inst, ip);
     if (inst.operand_size_override)
     {
         auto imm = static_cast<uint16_t>(inst.imm);
-        Op::call(reg<uint16_t>(REG_RAX), imm, flags);
+        Op::call(reg<uint16_t>(REG_RAX), imm, m_flags);
     }
     else if (inst.rex_w)
     {
         uint64_t imm64 = static_cast<int64_t>(inst.imm);
-        Op::call(reg<uint64_t>(REG_RAX), imm64, flags);
+        Op::call(reg<uint64_t>(REG_RAX), imm64, m_flags);
     }
     else
     {
         auto imm = static_cast<uint32_t>(inst.imm);
-        Op::call(reg<uint32_t>(REG_RAX), imm, flags);
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
+        Op::call(reg<uint32_t>(REG_RAX), imm, m_flags);
     }
     return ip;
 }
@@ -897,24 +879,15 @@ ptr_t CPU::op_jmp_cond(Instruction& instruction, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     // modrm has already been decoded
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), flags);
+        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), m_flags);
     }
     else
     {
-        Op::call(mem<uint8_t>(inst.address), flags);
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
+        Op::call(mem<uint8_t>(inst.address), m_flags);
     }
     return ip;
 }
@@ -922,26 +895,17 @@ ptr_t CPU::op_rm8(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     // modrm has already been decoded
     auto p = get_instruction_address(ip);
     uint8_t imm = p[0];
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), imm, flags);
+        Op::call(reg8(modrm.rm, inst.rex != 0, inst.rex_b), imm, m_flags);
     }
     else
     {
-        Op::call(mem<uint8_t>(inst.address), imm, flags);
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
+        Op::call(mem<uint8_t>(inst.address), imm, m_flags);
     }
     return ip + 1;
 }
@@ -949,25 +913,16 @@ ptr_t CPU::op_rm8_imm8(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm8_r8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<true>(inst, ip);
     const ModRM modrm = inst.mod_rm;
     uint8_t& reg = reg8(modrm.reg, inst.rex, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
-        Op::call(reg8(modrm.rm, inst.rex, inst.rex_b), reg, flags);
+        Op::call(reg8(modrm.rm, inst.rex, inst.rex_b), reg, m_flags);
     }
     else
     {
-        Op::call(mem<uint8_t>(inst.address), reg, flags);
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
+        Op::call(mem<uint8_t>(inst.address), reg, m_flags);
     }
     return ip;
 }
@@ -976,7 +931,7 @@ template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, t
 ptr_t CPU::dispatch_rm8_imm8(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<true, 1>(inst, ip);
-    flag_t flags = m_flags;
+
     const ModRM modrm = inst.mod_rm;
     auto imm8 = static_cast<uint8_t>(inst.imm);
     if (modrm.mod == MOD_DIRECT_REGISTER)
@@ -985,28 +940,28 @@ ptr_t CPU::dispatch_rm8_imm8(Instruction& inst, ptr_t ip)
         switch (modrm.reg)
         {
         case 0:
-            Op0::call(dst, imm8, flags);
+            Op0::call(dst, imm8, m_flags);
             break;
         case 1:
-            Op1::call(dst, imm8, flags);
+            Op1::call(dst, imm8, m_flags);
             break;
         case 2:
-            Op2::call(dst, imm8, flags);
+            Op2::call(dst, imm8, m_flags);
             break;
         case 3:
-            Op3::call(dst, imm8, flags);
+            Op3::call(dst, imm8, m_flags);
             break;
         case 4:
-            Op4::call(dst, imm8, flags);
+            Op4::call(dst, imm8, m_flags);
             break;
         case 5:
-            Op5::call(dst, imm8, flags);
+            Op5::call(dst, imm8, m_flags);
             break;
         case 6:
-            Op6::call(dst, imm8, flags);
+            Op6::call(dst, imm8, m_flags);
             break;
         case 7:
-            Op7::call(dst, imm8, flags);
+            Op7::call(dst, imm8, m_flags);
             break;
         }
     }
@@ -1016,32 +971,31 @@ ptr_t CPU::dispatch_rm8_imm8(Instruction& inst, ptr_t ip)
         switch (modrm.reg)
         {
         case 0:
-            Op0::call(dst, imm8, flags);
+            Op0::call(dst, imm8, m_flags);
             break;
         case 1:
-            Op1::call(dst, imm8, flags);
+            Op1::call(dst, imm8, m_flags);
             break;
         case 2:
-            Op2::call(dst, imm8, flags);
+            Op2::call(dst, imm8, m_flags);
             break;
         case 3:
-            Op3::call(dst, imm8, flags);
+            Op3::call(dst, imm8, m_flags);
             break;
         case 4:
-            Op4::call(dst, imm8, flags);
+            Op4::call(dst, imm8, m_flags);
             break;
         case 5:
-            Op5::call(dst, imm8, flags);
+            Op5::call(dst, imm8, m_flags);
             break;
         case 6:
-            Op6::call(dst, imm8, flags);
+            Op6::call(dst, imm8, m_flags);
             break;
         case 7:
-            Op7::call(dst, imm8, flags);
+            Op7::call(dst, imm8, m_flags);
             break;
         }
     }
-    m_flags = flags;
     return ip;
 }
 
@@ -1049,11 +1003,9 @@ template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, t
 ptr_t CPU::dispatch_rm32_imm32(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<true, 4>(inst, ip);
-    flag_t flags = m_flags;
 
     throw std::runtime_error("Not implemented");
 
-    m_flags = flags;
     return ip;
 }
 
@@ -1061,56 +1013,45 @@ template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, t
 ptr_t CPU::dispatch_rm32_imm8_sx(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<true, 1>(inst, ip);
-    flag_t flags = m_flags;
 
     throw std::runtime_error("Not implemented");
 
-    m_flags = flags;
     return ip;
 }
 
 template<typename Op>
 ptr_t CPU::op_rm32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
         {
-            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), m_flags);
         }
         else if (inst.rex_w)
         {
-            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), m_flags);
         }
         else
         {
-            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), m_flags);
         }
     }
     else
     {
         if (inst.operand_size_override)
         {
-            Op::call(mem<uint16_t>(inst.address), flags);
+            Op::call(mem<uint16_t>(inst.address), m_flags);
         }
         else if (inst.rex_w)
         {
-            Op::call(mem<uint64_t>(inst.address), flags);
+            Op::call(mem<uint64_t>(inst.address), m_flags);
         }
         else
         {
-            Op::call(mem<uint32_t>(inst.address), flags);
+            Op::call(mem<uint32_t>(inst.address), m_flags);
         }
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
     }
     return ip;
 }
@@ -1118,11 +1059,6 @@ ptr_t CPU::op_rm32(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     // mod_rm has already been decoded
     auto p = get_instruction_address(ip);
     const ModRM modrm = inst.mod_rm;
@@ -1132,19 +1068,19 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
         {
             auto imm = *reinterpret_cast<const uint16_t*>(p);
             ip += sizeof(imm);
-            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), imm, m_flags);
         }
         else if (inst.rex_w)
         {
             auto imm = *reinterpret_cast<const uint64_t*>(p);
             ip += sizeof(imm);
-            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), imm, m_flags);
         }
         else
         {
             auto imm = *reinterpret_cast<const uint32_t*>(p);
             ip += sizeof(imm);
-            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), imm, flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), imm, m_flags);
         }
     }
     else
@@ -1153,24 +1089,20 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
         {
             auto imm = *reinterpret_cast<const uint16_t*>(p);
             ip += sizeof(imm);
-            Op::call(mem<uint16_t>(inst.address), imm, flags);
+            Op::call(mem<uint16_t>(inst.address), imm, m_flags);
         }
         else if (inst.rex_w)
         {
             auto imm = *reinterpret_cast<const uint64_t*>(p);
             ip += sizeof(imm);
-            Op::call(mem<uint64_t>(inst.address), imm, flags);
+            Op::call(mem<uint64_t>(inst.address), imm, m_flags);
         }
         else
         {
             auto imm = *reinterpret_cast<const uint32_t*>(p);
             ip += sizeof(imm);
-            Op::call(mem<uint32_t>(inst.address), imm, flags);
+            Op::call(mem<uint32_t>(inst.address), imm, m_flags);
         }
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
     }
     return ip;
 }
@@ -1178,46 +1110,37 @@ ptr_t CPU::op_rm32_imm32(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<true>(inst, ip);
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
         {
-            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), reg<uint16_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint16_t>(modrm.rm, inst.rex_b), reg<uint16_t>(modrm.reg, inst.rex_r), m_flags);
         }
         else if (inst.rex_w)
         {
-            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), reg<uint64_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint64_t>(modrm.rm, inst.rex_b), reg<uint64_t>(modrm.reg, inst.rex_r), m_flags);
         }
         else
         {
-            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), reg<uint32_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(reg<uint32_t>(modrm.rm, inst.rex_b), reg<uint32_t>(modrm.reg, inst.rex_r), m_flags);
         }
     }
     else
     {
         if (inst.operand_size_override)
         {
-            Op::call(mem<uint16_t>(inst.address), reg<uint16_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(mem<uint16_t>(inst.address), reg<uint16_t>(modrm.reg, inst.rex_r), m_flags);
         }
         else if (inst.rex_w)
         {
-            Op::call(mem<uint64_t>(inst.address), reg<uint64_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(mem<uint64_t>(inst.address), reg<uint64_t>(modrm.reg, inst.rex_r), m_flags);
         }
         else
         {
-            Op::call(mem<uint32_t>(inst.address), reg<uint32_t>(modrm.reg, inst.rex_r), flags);
+            Op::call(mem<uint32_t>(inst.address), reg<uint32_t>(modrm.reg, inst.rex_r), m_flags);
         }
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
     }
     return ip;
 }
@@ -1225,27 +1148,18 @@ ptr_t CPU::op_rm32_r32(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<true>(inst, ip);
     const ModRM modrm = inst.mod_rm;
     uint8_t& dst = reg8(modrm.reg, inst.rex != 0, inst.rex_r);
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         uint8_t reg = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
-        Op::call(dst, reg, flags);
+        Op::call(dst, reg, m_flags);
     }
     else
     {
         uint8_t val = load<uint8_t>(inst.address);
-        Op::call(dst, val, flags);
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
+        Op::call(dst, val, m_flags);
     }
     return ip;
 }
@@ -1253,26 +1167,21 @@ ptr_t CPU::op_r8_rm8(Instruction& inst, ptr_t ip)
 template<typename Op>
 ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
 {
-    flag_t flags = 0;
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        flags = m_flags;
-    }
     ip = decode_instruction<true>(inst, ip);
     const ModRM modrm = inst.mod_rm;
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         if (inst.operand_size_override)
         {
-            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), reg<uint16_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), reg<uint16_t>(modrm.rm, inst.rex_b), m_flags);
         }
         else if (inst.rex_w)
         {
-            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), reg<uint64_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), reg<uint64_t>(modrm.rm, inst.rex_b), m_flags);
         }
         else
         {
-            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), reg<uint32_t>(modrm.rm, inst.rex_b), flags);
+            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), reg<uint32_t>(modrm.rm, inst.rex_b), m_flags);
         }
     }
     else
@@ -1280,22 +1189,18 @@ ptr_t CPU::op_r32_rm32(Instruction& inst, ptr_t ip)
         if (inst.operand_size_override)
         {
             auto m = load<uint16_t>(inst.address);
-            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint16_t>(modrm.reg, inst.rex_r), m, m_flags);
         }
         else if (inst.rex_w)
         {
             auto m = load<uint64_t>(inst.address);
-            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint64_t>(modrm.reg, inst.rex_r), m, m_flags);
         }
         else
         {
             auto m = load<uint32_t>(inst.address);
-            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), m, flags);
+            Op::call(reg<uint32_t>(modrm.reg, inst.rex_r), m, m_flags);
         }
-    }
-    if constexpr (Op::AFFECTED_FLAGS)
-    {
-        m_flags = flags;
     }
     return ip;
 }
