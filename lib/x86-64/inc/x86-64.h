@@ -70,23 +70,23 @@ namespace cpu::X86_64
         template<bool modrm, int imm_size = 0>
         ptr_t decode_instruction(Instruction&, ptr_t ip);
 
-        template<typename Op> ptr_t op_al_imm8(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_eax_imm32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_al_imm(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_eax_imm(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm8(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_rm8_imm8(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_rm8_r8(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm_imm8(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm_r8(Instruction&, ptr_t ip);
         template<typename Op> ptr_t op_rm32(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_rm32_imm32(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_rm32_r32(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_r8_rm8(Instruction&, ptr_t ip);
-        template<typename Op> ptr_t op_r32_rm32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm_imm32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_rm_r32(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_r_rm8(Instruction&, ptr_t ip);
+        template<typename Op> ptr_t op_r_rm32(Instruction&, ptr_t ip);
 
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t dispatch_rm8_imm8(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm_imm8(Instruction&, ptr_t ip);
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t dispatch_rm32_imm32(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm_imm32(Instruction&, ptr_t ip);
         template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
-        ptr_t dispatch_rm32_imm8_sx(Instruction&, ptr_t ip);
+        ptr_t dispatch_rm_imm8_sx(Instruction&, ptr_t ip);
 
         ptr_t dispatch_F6(Instruction&, ptr_t ip);
         ptr_t dispatch_F7(Instruction&, ptr_t ip);
