@@ -9,6 +9,7 @@
 
 using cpu::X86_64::CPU;
 using cpu::X86_64::ptr_t;
+using cpu::X86_64::flag_t;
 
 /**
  * see 2.1.1 Instruction Prefixes
@@ -927,6 +928,41 @@ ptr_t CPU::op_rm_r8(Instruction& inst, ptr_t ip)
     return ip;
 }
 
+namespace
+{
+    template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7, typename reg_t>
+    void dispatch(uint8_t op, reg_t& dst, reg_t src, flag_t& flags)
+    {
+        switch (op)
+        {
+        case 0:
+            Op0::call(dst, src, flags);
+            break;
+        case 1:
+            Op1::call(dst, src, flags);
+            break;
+        case 2:
+            Op2::call(dst, src, flags);
+            break;
+        case 3:
+            Op3::call(dst, src, flags);
+            break;
+        case 4:
+            Op4::call(dst, src, flags);
+            break;
+        case 5:
+            Op5::call(dst, src, flags);
+            break;
+        case 6:
+            Op6::call(dst, src, flags);
+            break;
+        case 7:
+            Op7::call(dst, src, flags);
+            break;
+        }
+    }
+}
+
 template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, typename Op5, typename Op6, typename Op7>
 ptr_t CPU::dispatch_rm_imm8(Instruction& inst, ptr_t ip)
 {
@@ -937,64 +973,12 @@ ptr_t CPU::dispatch_rm_imm8(Instruction& inst, ptr_t ip)
     if (modrm.mod == MOD_DIRECT_REGISTER)
     {
         auto& dst = reg8(modrm.rm, inst.rex != 0, inst.rex_b);
-        switch (modrm.reg)
-        {
-        case 0:
-            Op0::call(dst, imm8, m_flags);
-            break;
-        case 1:
-            Op1::call(dst, imm8, m_flags);
-            break;
-        case 2:
-            Op2::call(dst, imm8, m_flags);
-            break;
-        case 3:
-            Op3::call(dst, imm8, m_flags);
-            break;
-        case 4:
-            Op4::call(dst, imm8, m_flags);
-            break;
-        case 5:
-            Op5::call(dst, imm8, m_flags);
-            break;
-        case 6:
-            Op6::call(dst, imm8, m_flags);
-            break;
-        case 7:
-            Op7::call(dst, imm8, m_flags);
-            break;
-        }
+        dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7>(modrm.reg, dst, imm8, m_flags);
     }
     else
     {
         auto& dst = mem<uint8_t>(inst.address);
-        switch (modrm.reg)
-        {
-        case 0:
-            Op0::call(dst, imm8, m_flags);
-            break;
-        case 1:
-            Op1::call(dst, imm8, m_flags);
-            break;
-        case 2:
-            Op2::call(dst, imm8, m_flags);
-            break;
-        case 3:
-            Op3::call(dst, imm8, m_flags);
-            break;
-        case 4:
-            Op4::call(dst, imm8, m_flags);
-            break;
-        case 5:
-            Op5::call(dst, imm8, m_flags);
-            break;
-        case 6:
-            Op6::call(dst, imm8, m_flags);
-            break;
-        case 7:
-            Op7::call(dst, imm8, m_flags);
-            break;
-        }
+        dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7>(modrm.reg, dst, imm8, m_flags);
     }
     return ip;
 }
@@ -1013,8 +997,51 @@ template<typename Op0, typename Op1, typename Op2, typename Op3, typename Op4, t
 ptr_t CPU::dispatch_rm_imm8_sx(Instruction& inst, ptr_t ip)
 {
     ip = decode_instruction<true, 1>(inst, ip);
+    const ModRM modrm = inst.mod_rm;
+    int8_t imm8 = static_cast<int8_t>(inst.imm);
 
-    throw std::runtime_error("Not implemented");
+    if (modrm.mod == MOD_DIRECT_REGISTER)
+    {
+        if (inst.operand_size_override)
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint16_t>(modrm.reg,
+                reg<uint16_t>(modrm.rm, inst.rex_b),
+                static_cast<int16_t>(imm8), m_flags);
+        }
+        if (inst.rex_w)
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint64_t>(modrm.reg,
+                reg<uint64_t>(modrm.rm, inst.rex_b),
+                static_cast<int64_t>(imm8), m_flags);
+        }
+        else
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint32_t>(modrm.reg,
+                reg<uint32_t>(modrm.rm, inst.rex_b),
+                static_cast<int32_t>(imm8), m_flags);
+        }
+    }
+    else
+    {
+        if (inst.operand_size_override)
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint16_t>(modrm.reg,
+                mem<uint16_t>(inst.address),
+                static_cast<int16_t>(imm8), m_flags);
+        }
+        if (inst.rex_w)
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint64_t>(modrm.reg,
+                mem<uint64_t>(inst.address),
+                static_cast<int64_t>(imm8), m_flags);
+        }
+        else
+        {
+            dispatch<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, uint32_t>(modrm.reg,
+                mem<uint32_t>(inst.address),
+                static_cast<int32_t>(imm8), m_flags);
+        }
+    }
 
     return ip;
 }

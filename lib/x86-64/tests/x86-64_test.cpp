@@ -354,6 +354,7 @@ BOOST_AUTO_TEST_CASE(add_rax_imm_test)
         0x66, 0x05, 0xff, 0xff, // add ax, -1
         0x05, 0xff, 0xff, 0xff, 0xff, // add eax, -1
         0x48, 0x05, 0xff, 0xff, 0xff, 0xff, // add rax, -1
+        0x48, 0x83, 0xC0, 0xff, // add rax, -1
     };
     kernel::MemoryAdapter mem(inst, 0);
     CPU cpu(&mem);
@@ -372,6 +373,10 @@ BOOST_AUTO_TEST_CASE(add_rax_imm_test)
 
     cpu.setRegister(REG_RAX, 0);
     BOOST_REQUIRE_NO_THROW(cpu.execute_next());
+    BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint64_t>(-1));
+
+    cpu.setRegister(REG_RAX, 0);
+    BOOST_REQUIRE_NO_THROW(cpu.execute_next()); // add rax, 0xff
     BOOST_CHECK_EQUAL(cpu.getRegister(REG_RAX), static_cast<uint64_t>(-1));
 }
 
